@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/Progress';
 import { assessmentQuestions } from '@/lib/demoData';
-import { saveAssessmentResult } from '@/lib/supabase/dal';
+import { saveAssessmentResult, addRoadmapItem } from '@/lib/supabase/dal';
 import { cn } from '@/lib/utils';
 
 export default function AssessmentPage() {
@@ -35,6 +35,45 @@ export default function AssessmentPage() {
     return Math.round((total / (assessmentQuestions.length * 4)) * 100);
   };
 
+  // Map each weak question (score 1 or 2) to a roadmap milestone
+  const ROADMAP_SUGGESTIONS: Record<string, { title: string; description: string; category: string; priority: string; estimated_time: string }> = {
+    'q-1': {
+      title: 'Improve Core Professional Skills',
+      description: 'Identify the key skills needed for your target role and take focused courses or workshops to build proficiency.',
+      category: 'skill',
+      priority: 'high',
+      estimated_time: '4–8 weeks',
+    },
+    'q-2': {
+      title: 'Gain Relevant Work Experience',
+      description: 'Seek internships, freelance projects, or volunteer roles in your target field to build practical experience.',
+      category: 'experience',
+      priority: 'high',
+      estimated_time: '3–6 months',
+    },
+    'q-3': {
+      title: 'Build Your Professional Network',
+      description: 'Attend industry events, connect with professionals on LinkedIn, and join relevant communities to grow your network.',
+      category: 'skill',
+      priority: 'medium',
+      estimated_time: '2–4 weeks',
+    },
+    'q-4': {
+      title: 'Revamp Your CV & Online Presence',
+      description: 'Update your CV, create a professional LinkedIn profile, and build an online portfolio to strengthen your personal brand.',
+      category: 'skill',
+      priority: 'high',
+      estimated_time: '1 week',
+    },
+    'q-5': {
+      title: 'Practice Interview Skills',
+      description: 'Prepare for common interview questions, do mock interviews, and research companies in your target industry.',
+      category: 'skill',
+      priority: 'medium',
+      estimated_time: '2 weeks',
+    },
+  };
+
   const handleNext = async () => {
     if (currentQ < total - 1) {
       setCurrentQ(currentQ + 1);
@@ -44,6 +83,26 @@ export default function AssessmentPage() {
       try {
         if (user) {
           await saveAssessmentResult(user.id, s, answers);
+
+          // Auto-generate roadmap items for weak areas (score 1 or 2)
+          const weakQuestions = Object.entries(answers).filter(([, v]) => parseInt(v) <= 2);
+          if (weakQuestions.length > 0) {
+            const roadmapPromises = weakQuestions.map(([qId], index) => {
+              const suggestion = ROADMAP_SUGGESTIONS[qId];
+              if (!suggestion) return Promise.resolve();
+              return addRoadmapItem({
+                profile_id: user.id,
+                title: suggestion.title,
+                description: suggestion.description,
+                category: suggestion.category,
+                priority: suggestion.priority,
+                estimated_time: suggestion.estimated_time,
+                completed: false,
+                sort_order: index,
+              }).catch(() => {/* non-critical */});
+            });
+            await Promise.all(roadmapPromises);
+          }
         }
       } catch {
         // non-critical — still show result
@@ -76,7 +135,9 @@ export default function AssessmentPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Employability Score</h2>
             <p className={cn('text-lg font-semibold mb-4', color)}>{level}</p>
             <p className="text-gray-600 max-w-md mx-auto mb-8">
-              Based on your responses, we've generated a personalized career roadmap. Check it out to see your recommended next steps.
+              {Object.values(answers).filter(v => parseInt(v) <= 2).length > 0
+                ? `We've added ${Object.values(answers).filter(v => parseInt(v) <= 2).length} personalized milestone${Object.values(answers).filter(v => parseInt(v) <= 2).length > 1 ? 's' : ''} to your roadmap based on your weak areas. Check it out to see your recommended next steps.`
+                : "Great job! Your profile is strong across all areas. Check your roadmap for ongoing career development tips."}
             </p>
 
             <div className="grid grid-cols-2 gap-4 mb-8 max-w-sm mx-auto">
