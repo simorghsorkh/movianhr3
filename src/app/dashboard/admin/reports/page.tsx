@@ -6,7 +6,6 @@ import { useLang } from '@/contexts/LanguageContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { adminStats } from '@/lib/demoData';
 import { cn } from '@/lib/utils';
 
 export default function AdminReportsPage() {

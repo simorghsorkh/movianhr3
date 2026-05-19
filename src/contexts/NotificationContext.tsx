@@ -1,6 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { getNotifications, markNotificationRead, markAllNotificationsRead } from '@/lib/supabase/dal';
 
 export interface AppNotification {
   id: string;
@@ -18,68 +20,75 @@ interface NotificationContextValue {
   markRead: (id: string) => void;
   markAllRead: () => void;
   addNotification: (n: Omit<AppNotification, 'id' | 'read' | 'time'>) => void;
+  refresh: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
-const DEMO_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: 'n1',
-    type: 'request',
-    title: 'New consultation request',
-    body: 'Sara Ahmadi sent you a consultation request about career transition.',
-    time: '2 min ago',
-    read: false,
-    href: '/dashboard/mentor/requests',
-  },
-  {
-    id: 'n2',
-    type: 'approval',
-    title: 'Your course was approved',
-    body: '"Advanced React Patterns" has been approved by admin and is now live.',
-    time: '1 hour ago',
-    read: false,
-    href: '/dashboard/trainer/courses',
-  },
-  {
-    id: 'n3',
-    type: 'session',
-    title: 'Session reminder',
-    body: 'You have a session with Ali Rezaei tomorrow at 14:00.',
-    time: '3 hours ago',
-    read: false,
-    href: '/dashboard/mentor/sessions',
-  },
-  {
-    id: 'n4',
-    type: 'course',
-    title: 'New enrollment',
-    body: '5 new students enrolled in "UI/UX Design Fundamentals" today.',
-    time: 'Yesterday',
-    read: true,
-    href: '/dashboard/trainer/students',
-  },
-  {
-    id: 'n5',
-    type: 'system',
-    title: 'Profile completion',
-    body: 'Complete your profile to get 3x more consultation requests.',
-    time: '2 days ago',
-    read: true,
-    href: '/dashboard/job-seeker/profile',
-  },
-];
+function formatTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hour${Math.floor(diff / 3600) > 1 ? 's' : ''} ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) > 1 ? 's' : ''} ago`;
+  return date.toLocaleDateString();
+}
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const [notifications, setNotifications] = useState<AppNotification[]>(DEMO_NOTIFICATIONS);
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!user) return;
+    try {
+      const data = await getNotifications(user.id);
+      const mapped: AppNotification[] = data.map((n: any) => ({
+        id: n.id,
+        type: n.type ?? 'system',
+        title: n.title,
+        body: n.body,
+        time: formatTime(n.created_at),
+        read: n.read ?? false,
+        href: n.href ?? undefined,
+      }));
+      setNotifications(mapped);
+    } catch {
+      // silently fail — notifications are non-critical
+      setNotifications([]);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadNotifications();
+    } else {
+      setNotifications([]);
+    }
+  }, [user, loadNotifications]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markRead = (id: string) =>
+  const markRead = async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    try {
+      await markNotificationRead(id);
+    } catch {
+      // silently fail
+    }
+  };
 
-  const markAllRead = () =>
+  const markAllRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    if (user) {
+      try {
+        await markAllNotificationsRead(user.id);
+      } catch {
+        // silently fail
+      }
+    }
+  };
 
   const addNotification = (n: Omit<AppNotification, 'id' | 'read' | 'time'>) =>
     setNotifications(prev => [
@@ -87,8 +96,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       ...prev,
     ]);
 
+  const refresh = () => loadNotifications();
+
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markRead, markAllRead, addNotification }}>
+    <NotificationContext.Provider value={{ notifications, unreadCount, markRead, markAllRead, addNotification, refresh }}>
       {children}
     </NotificationContext.Provider>
   );

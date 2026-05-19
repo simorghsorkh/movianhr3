@@ -164,6 +164,16 @@ export async function getMyEnrollments(jobSeekerId: string) {
   return data ?? [];
 }
 
+export async function getTrainerStudents(trainerId: string) {
+  const { data, error } = await sb()
+    .from('course_enrollments')
+    .select('*, courses!inner(id, title, trainer_id), seeker:job_seeker_id(id, name, email, avatar)')
+    .eq('courses.trainer_id', trainerId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 // ── Consultation Requests ───────────────────────────────────
 
 export async function sendConsultationRequest(req: Record<string, unknown>) {

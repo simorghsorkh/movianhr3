@@ -3,20 +3,24 @@
 import React, { useState } from 'react';
 import { CheckCircle, ArrowRight, ArrowLeft, BarChart3 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/Progress';
 import { assessmentQuestions } from '@/lib/demoData';
+import { saveAssessmentResult } from '@/lib/supabase/dal';
 import { cn } from '@/lib/utils';
 
 export default function AssessmentPage() {
   const { t, lang, isRTL } = useLang();
+  const { user } = useAuth();
   const toast = useToast();
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const total = assessmentQuestions.length;
   const question = assessmentQuestions[currentQ];
@@ -31,11 +35,22 @@ export default function AssessmentPage() {
     return Math.round((total / (assessmentQuestions.length * 4)) * 100);
   };
 
-  const handleNext = () => {
-    if (currentQ < total - 1) setCurrentQ(currentQ + 1);
-    else {
-      setSubmitted(true);
+  const handleNext = async () => {
+    if (currentQ < total - 1) {
+      setCurrentQ(currentQ + 1);
+    } else {
       const s = calcScore();
+      setSaving(true);
+      try {
+        if (user) {
+          await saveAssessmentResult(user.id, s, answers);
+        }
+      } catch {
+        // non-critical — still show result
+      } finally {
+        setSaving(false);
+      }
+      setSubmitted(true);
       toast.success(`Assessment complete! Your score: ${s}%`);
     }
   };
@@ -143,7 +158,7 @@ export default function AssessmentPage() {
               <ArrowLeft size={16} className={isRTL ? 'rotate-180' : ''} />
               {t('back')}
             </Button>
-            <Button onClick={handleNext} disabled={!answers[question.id]}>
+            <Button onClick={handleNext} disabled={!answers[question.id]} loading={saving}>
               {currentQ === total - 1 ? 'Submit' : t('next')}
               <ArrowRight size={16} className={isRTL ? 'rotate-180' : ''} />
             </Button>

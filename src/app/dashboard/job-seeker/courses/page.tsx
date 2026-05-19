@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Star, Clock, Users, BookOpen } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card } from '@/components/ui/Card';
@@ -10,32 +11,84 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { demoCourses } from '@/lib/demoData';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { getPublishedCourses, enrollInCourse, getMyEnrollments } from '@/lib/supabase/dal';
 import { cn } from '@/lib/utils';
 
 const levelColors = { beginner: 'success', intermediate: 'warning', advanced: 'danger' } as const;
 
 export default function CoursesPage() {
-  const { t, lang, isRTL } = useLang();
+  const { t, isRTL } = useLang();
+  const { user } = useAuth();
   const toast = useToast();
+
+  const [courses, setCourses] = useState<any[]>([]);
+  const [enrolledIds, setEnrolledIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState<string>('all');
-  const [enrolled, setEnrolled] = useState<string[]>([]);
   const [enrollModal, setEnrollModal] = useState<string | null>(null);
+  const [enrolling, setEnrolling] = useState(false);
 
-  const published = demoCourses.filter(c => c.status === 'published' && c.approvalStatus === 'approved');
-  const filtered = published.filter(c => {
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      try {
+        const [allCourses, myEnrollments] = await Promise.all([
+          getPublishedCourses(),
+          getMyEnrollments(user.id),
+        ]);
+        setCourses(allCourses);
+        setEnrolledIds(myEnrollments.map((e: any) => e.course_id));
+      } catch {
+        toast.error('Failed to load courses.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [user]);
+
+  const filtered = courses.filter(c => {
     const matchLevel = level === 'all' || c.level === level;
-    const matchSearch = !search || c.title.toLowerCase().includes(search.toLowerCase()) || c.trainerName.toLowerCase().includes(search.toLowerCase());
+    const trainerName = (c.profiles as any)?.name ?? '';
+    const matchSearch = !search ||
+      c.title?.toLowerCase().includes(search.toLowerCase()) ||
+      trainerName.toLowerCase().includes(search.toLowerCase());
     return matchLevel && matchSearch;
   });
 
-  const handleEnroll = (courseId: string) => {
-    const course = published.find(c => c.id === courseId);
-    setEnrolled([...enrolled, courseId]);
-    setEnrollModal(null);
-    toast.success(`Enrolled in "${course?.title}"! Start learning now.`);
+  const handleEnroll = async (courseId: string) => {
+    if (!user) return;
+    setEnrolling(true);
+    try {
+      await enrollInCourse(courseId, user.id);
+      setEnrolledIds(prev => [...prev, courseId]);
+      setEnrollModal(null);
+      const course = courses.find(c => c.id === courseId);
+      toast.success(`Enrolled in "${course?.title}"! Start learning now.`);
+    } catch (err: any) {
+      if (err?.code === '23505') {
+        toast.warning('You are already enrolled in this course.');
+        setEnrolledIds(prev => [...prev, courseId]);
+      } else {
+        toast.error('Failed to enroll. Please try again.');
+      }
+      setEnrollModal(null);
+    } finally {
+      setEnrolling(false);
+    }
   };
+
+  const enrolledCourses = courses.filter(c => enrolledIds.includes(c.id));
+
+  if (loading) return (
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-72 w-full rounded-2xl" />)}
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -43,7 +96,7 @@ export default function CoursesPage() {
 
       <div className="p-6 space-y-6">
         {/* Filters */}
-        <div className={cn('flex flex-col sm:flex-row gap-3', isRTL ? 'flex-row-reverse' : '')}>
+        <div className={cn('flex flex-col sm:flex-row gap-3', isRTL ? 'sm:flex-row-reverse' : '')}>
           <div className="flex-1">
             <Input placeholder="Search courses..." value={search} onChange={e => setSearch(e.target.value)} leftIcon={<Search size={16} />} />
           </div>
@@ -60,22 +113,19 @@ export default function CoursesPage() {
           </div>
         </div>
 
-        {/* Enrolled courses */}
-        {enrolled.length > 0 && (
+        {/* My Enrolled Courses */}
+        {enrolledCourses.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-3">My Enrolled Courses</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {published.filter(c => enrolled.includes(c.id)).map(course => (
+              {enrolledCourses.map(course => (
                 <Card key={course.id} className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center flex-shrink-0 text-primary-600">
                     <BookOpen size={20} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{lang === 'fa' ? course.titleFa : course.title}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <div className="h-1.5 w-24 bg-gray-100 rounded-full"><div className="h-1.5 w-8 bg-primary-500 rounded-full" /></div>
-                      <span className="text-xs text-gray-400">33% complete</span>
-                    </div>
+                    <p className="text-sm font-semibold text-gray-900">{course.title}</p>
+                    <p className="text-xs text-gray-500">{(course.profiles as any)?.name}</p>
                   </div>
                 </Card>
               ))}
@@ -83,14 +133,20 @@ export default function CoursesPage() {
           </div>
         )}
 
-        {/* Course grid */}
+        {/* Course Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((course) => (
             <Card key={course.id} className="flex flex-col p-0 overflow-hidden">
-              <img src={course.thumbnail} alt={course.title} className="w-full h-40 object-cover" />
+              {course.thumbnail ? (
+                <img src={course.thumbnail} alt={course.title} className="w-full h-40 object-cover" />
+              ) : (
+                <div className="w-full h-40 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
+                  <BookOpen size={32} className="text-primary-400" />
+                </div>
+              )}
               <div className="p-4 flex flex-col flex-1">
                 <div className={cn('flex items-center justify-between mb-2', isRTL ? 'flex-row-reverse' : '')}>
-                  <Badge variant={levelColors[course.level]}>{course.level}</Badge>
+                  <Badge variant={levelColors[course.level as keyof typeof levelColors] ?? 'default'}>{course.level}</Badge>
                   {course.rating && (
                     <div className={cn('flex items-center gap-1 text-xs text-gray-500', isRTL ? 'flex-row-reverse' : '')}>
                       <Star size={12} className="text-amber-400 fill-amber-400" />
@@ -98,35 +154,41 @@ export default function CoursesPage() {
                     </div>
                   )}
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
-                  {lang === 'fa' ? course.titleFa : course.title}
-                </h3>
-                <p className="text-xs text-gray-500 mb-2">{course.trainerName}</p>
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-1">
-                  {lang === 'fa' ? course.descriptionFa : course.description}
-                </p>
+                <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">{course.title}</h3>
+                <p className="text-xs text-gray-500 mb-2">{(course.profiles as any)?.name}</p>
+                <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-1">{course.description}</p>
                 <div className={cn('flex items-center gap-3 text-xs text-gray-400 mb-3', isRTL ? 'flex-row-reverse' : '')}>
-                  <span className="flex items-center gap-1"><Clock size={12} /> {course.duration}</span>
-                  <span className="flex items-center gap-1"><Users size={12} /> {course.enrollments}</span>
+                  {course.duration && <span className="flex items-center gap-1"><Clock size={12} /> {course.duration}</span>}
+                  <span className="flex items-center gap-1"><Users size={12} /> {course.enrollments_count ?? 0}</span>
                 </div>
                 <div className={cn('flex items-center justify-between mt-auto pt-3 border-t border-gray-100', isRTL ? 'flex-row-reverse' : '')}>
-                  <span className="text-base font-bold text-gray-900">{course.price.toLocaleString('fa-IR')} <span className="text-xs font-normal text-gray-500">تومان</span></span>
+                  <span className="text-base font-bold text-gray-900">
+                    {course.price ? course.price.toLocaleString('fa-IR') : 'Free'}
+                    {course.price ? <span className="text-xs font-normal text-gray-500 ms-1">تومان</span> : ''}
+                  </span>
                   <Button
                     size="sm"
                     onClick={() => setEnrollModal(course.id)}
-                    disabled={enrolled.includes(course.id)}
-                    variant={enrolled.includes(course.id) ? 'secondary' : 'primary'}
+                    disabled={enrolledIds.includes(course.id)}
+                    variant={enrolledIds.includes(course.id) ? 'secondary' : 'primary'}
                   >
-                    {enrolled.includes(course.id) ? '✓ Enrolled' : t('enroll')}
+                    {enrolledIds.includes(course.id) ? '✓ Enrolled' : t('enroll')}
                   </Button>
                 </div>
               </div>
             </Card>
           ))}
         </div>
+
+        {filtered.length === 0 && !loading && (
+          <div className="text-center py-16 text-gray-400">
+            <BookOpen size={40} className="mx-auto mb-3 opacity-40" />
+            <p>{courses.length === 0 ? 'No courses available yet.' : 'No courses match your search.'}</p>
+          </div>
+        )}
       </div>
 
-      {/* Enroll confirmation */}
+      {/* Enroll Confirmation Modal */}
       <Modal
         isOpen={!!enrollModal}
         onClose={() => setEnrollModal(null)}
@@ -135,13 +197,13 @@ export default function CoursesPage() {
         footer={
           <>
             <Button variant="outline" onClick={() => setEnrollModal(null)}>Cancel</Button>
-            <Button onClick={() => enrollModal && handleEnroll(enrollModal)}>Confirm Enrollment</Button>
+            <Button onClick={() => enrollModal && handleEnroll(enrollModal)} loading={enrolling}>Confirm Enrollment</Button>
           </>
         }
       >
         <p className="text-gray-600">
-          You're about to enroll in <strong>{demoCourses.find(c => c.id === enrollModal)?.title}</strong>.
-          In the full version, this would process payment and give you access to all course materials.
+          You're about to enroll in <strong>{courses.find(c => c.id === enrollModal)?.title}</strong>.
+          You'll get full access to all course materials.
         </p>
       </Modal>
     </div>
