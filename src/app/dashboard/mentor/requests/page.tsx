@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +16,7 @@ import type { ConsultationRequest, RequestStatus } from '@/lib/types';
 
 export default function MentorRequestsPage() {
   const { t, isRTL } = useLang();
+  const toast = useToast();
   const [requests, setRequests] = useState<ConsultationRequest[]>(demoRequests);
   const [filter, setFilter] = useState<string>('all');
   const [noteModal, setNoteModal] = useState<string | null>(null);
@@ -22,12 +24,16 @@ export default function MentorRequestsPage() {
 
   const updateStatus = (id: string, status: RequestStatus) => {
     setRequests(requests.map(r => r.id === id ? { ...r, status } : r));
+    if (status === 'accepted') toast.success('Request accepted! The job seeker will be notified.');
+    else if (status === 'rejected') toast.warning('Request rejected.');
+    else if (status === 'completed') toast.success('Session marked as completed.');
   };
 
   const saveNote = (id: string) => {
     setRequests(requests.map(r => r.id === id ? { ...r, notes: note } : r));
     setNoteModal(null);
     setNote('');
+    toast.success('Session note saved successfully.');
   };
 
   const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter);

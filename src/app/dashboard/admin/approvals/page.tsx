@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Check, X, BookOpen, Users, UserCheck } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -14,17 +15,30 @@ import type { ApprovalStatus } from '@/lib/types';
 
 export default function AdminApprovalsPage() {
   const { t, lang, isRTL } = useLang();
+  const toast = useToast();
   const [mentors, setMentors] = useState(demoMentors);
   const [trainers, setTrainers] = useState(demoTrainers);
   const [courses, setCourses] = useState(demoCourses);
   const [tab, setTab] = useState<'mentors' | 'trainers' | 'courses'>('mentors');
 
-  const approveMentor = (id: string, status: ApprovalStatus) =>
+  const approveMentor = (id: string, status: ApprovalStatus) => {
+    const mentor = mentors.find(m => m.id === id);
     setMentors(mentors.map(m => m.id === id ? { ...m, approvalStatus: status } : m));
-  const approveTrainer = (id: string, status: ApprovalStatus) =>
-    setTrainers(trainers.map(t => t.id === id ? { ...t, approvalStatus: status } : t));
-  const approveCourse = (id: string, status: ApprovalStatus) =>
+    if (status === 'approved') toast.success(`${mentor?.name} has been approved as a mentor.`);
+    else toast.warning(`${mentor?.name}'s application has been rejected.`);
+  };
+  const approveTrainer = (id: string, status: ApprovalStatus) => {
+    const trainer = trainers.find(tr => tr.id === id);
+    setTrainers(trainers.map(tr => tr.id === id ? { ...tr, approvalStatus: status } : tr));
+    if (status === 'approved') toast.success(`${trainer?.name} has been approved as a trainer.`);
+    else toast.warning(`${trainer?.name}'s application has been rejected.`);
+  };
+  const approveCourse = (id: string, status: ApprovalStatus) => {
+    const course = courses.find(c => c.id === id);
     setCourses(courses.map(c => c.id === id ? { ...c, approvalStatus: status } : c));
+    if (status === 'approved') toast.success(`"${course?.title}" has been approved.`);
+    else toast.warning(`"${course?.title}" has been rejected.`);
+  };
 
   const pendingMentors = mentors.filter(m => m.approvalStatus === 'pending');
   const pendingTrainers = trainers.filter(t => t.approvalStatus === 'pending');

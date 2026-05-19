@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ToastProvider } from '@/contexts/ToastContext';
 
 export const metadata: Metadata = {
   title: 'Movian — Career Transformation Platform',
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthProvider>
           <LanguageProvider>
-            {children}
+            <ToastProvider>
+              {children}
+            </ToastProvider>
           </LanguageProvider>
         </AuthProvider>
       </body>

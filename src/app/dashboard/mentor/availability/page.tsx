@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Clock, Save } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +14,7 @@ const timeSlots = ['09:00–10:00', '10:00–11:00', '11:00–12:00', '14:00–1
 
 export default function AvailabilityPage() {
   const { t, isRTL } = useLang();
+  const toast = useToast();
   const [selected, setSelected] = useState<Set<string>>(new Set(['Monday-09:00–10:00', 'Wednesday-14:00–15:00', 'Friday-16:00–17:00']));
   const [saved, setSaved] = useState(false);
 
@@ -31,7 +33,7 @@ export default function AvailabilityPage() {
         <Card>
           <CardHeader>
             <CardTitle>Weekly Schedule</CardTitle>
-            <Button size="sm" onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); }}>
+            <Button size="sm" onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); toast.success(`Availability saved — ${selected.size} slots set.`); }}>
               <Save size={14} /> {t('save')}
             </Button>
           </CardHeader>

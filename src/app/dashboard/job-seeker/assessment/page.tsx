@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { CheckCircle, ArrowRight, ArrowLeft, BarChart3 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +13,7 @@ import { cn } from '@/lib/utils';
 
 export default function AssessmentPage() {
   const { t, lang, isRTL } = useLang();
+  const toast = useToast();
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -31,7 +33,11 @@ export default function AssessmentPage() {
 
   const handleNext = () => {
     if (currentQ < total - 1) setCurrentQ(currentQ + 1);
-    else setSubmitted(true);
+    else {
+      setSubmitted(true);
+      const s = calcScore();
+      toast.success(`Assessment complete! Your score: ${s}%`);
+    }
   };
 
   const handlePrev = () => {

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit3, Archive, Globe, Trash2 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,13 +17,16 @@ import type { Course, CourseStatus } from '@/lib/types';
 
 export default function TrainerCoursesPage() {
   const { t, lang, isRTL } = useLang();
+  const toast = useToast();
   const [courses, setCourses] = useState<Course[]>(demoCourses.filter(c => c.trainerId === 'trainer-1'));
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<Course>>({});
 
   const saveCourse = () => {
-    if (editing.id) {
+    const isEdit = !!editing.id;
+    if (isEdit) {
       setCourses(courses.map(c => c.id === editing.id ? { ...c, ...editing } as Course : c));
+      toast.success('Course updated successfully!');
     } else {
       const newCourse: Course = {
         id: generateId(),
@@ -43,6 +47,7 @@ export default function TrainerCoursesPage() {
         thumbnail: `https://picsum.photos/seed/${Math.random()}/400/250`,
       };
       setCourses([...courses, newCourse]);
+      toast.success('Course created! Submitted for admin review.');
     }
     setModalOpen(false);
     setEditing({});
@@ -50,6 +55,9 @@ export default function TrainerCoursesPage() {
 
   const updateStatus = (id: string, status: CourseStatus) => {
     setCourses(courses.map(c => c.id === id ? { ...c, status } : c));
+    if (status === 'published') toast.success('Course published and visible to learners!');
+    else if (status === 'archived') toast.info('Course archived.');
+    else toast.info('Course set to draft.');
   };
 
   return (

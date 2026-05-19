@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Star, MessageSquare, Search, Filter } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,13 +17,13 @@ import { cn } from '@/lib/utils';
 
 export default function MentorsPage() {
   const { t, isRTL } = useLang();
+  const toast = useToast();
   const [search, setSearch] = useState('');
   const [selectedMentor, setSelectedMentor] = useState<typeof demoMentors[0] | null>(null);
   const [requestModal, setRequestModal] = useState(false);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState<string[]>([]);
-  const [successModal, setSuccessModal] = useState(false);
 
   const filtered = demoMentors.filter(m =>
     m.approvalStatus === 'approved' &&
@@ -34,9 +35,9 @@ export default function MentorsPage() {
     if (selectedMentor) {
       setSubmitted([...submitted, selectedMentor.id]);
       setRequestModal(false);
-      setSuccessModal(true);
       setSubject('');
       setMessage('');
+      toast.success(`Consultation request sent to ${selectedMentor.name}! They'll respond soon.`);
     }
   };
 
@@ -123,14 +124,6 @@ export default function MentorsPage() {
         </div>
       </Modal>
 
-      {/* Success modal */}
-      <Modal isOpen={successModal} onClose={() => setSuccessModal(false)} title="Request Sent!" size="sm">
-        <div className="text-center py-4">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 text-2xl">✓</div>
-          <p className="text-gray-600">Your consultation request has been sent. The mentor will review and respond shortly.</p>
-          <Button onClick={() => setSuccessModal(false)} className="mt-6" fullWidth>Got it</Button>
-        </div>
-      </Modal>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Search, Star, Clock, Users, BookOpen } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,7 @@ const levelColors = { beginner: 'success', intermediate: 'warning', advanced: 'd
 
 export default function CoursesPage() {
   const { t, lang, isRTL } = useLang();
+  const toast = useToast();
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState<string>('all');
   const [enrolled, setEnrolled] = useState<string[]>([]);
@@ -29,8 +31,10 @@ export default function CoursesPage() {
   });
 
   const handleEnroll = (courseId: string) => {
+    const course = published.find(c => c.id === courseId);
     setEnrolled([...enrolled, courseId]);
     setEnrollModal(null);
+    toast.success(`Enrolled in "${course?.title}"! Start learning now.`);
   };
 
   return (

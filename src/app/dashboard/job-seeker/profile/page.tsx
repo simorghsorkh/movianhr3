@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, Briefcase, GraduationCap, Zap, Globe, Edit3, Save, X } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +20,7 @@ import type { WorkExperience, Education } from '@/lib/types';
 export default function JobSeekerProfilePage() {
   const { t, isRTL } = useLang();
   const { user, updateUser } = useAuth();
+  const toast = useToast();
 
   const demoData = demoJobSeekers[0];
   const [skills, setSkills] = useState<string[]>(demoData.skills ?? []);
@@ -34,6 +36,7 @@ export default function JobSeekerProfilePage() {
   const handleSaveProfile = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+    toast.success('Profile saved successfully!');
   };
 
   const addSkill = () => {

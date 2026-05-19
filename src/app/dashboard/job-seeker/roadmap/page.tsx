@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Progress } from '@/components/ui/Progress';
 import { demoRoadmap } from '@/lib/demoData';
+import { useToast } from '@/contexts/ToastContext';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
 import type { RoadmapItem } from '@/lib/types';
 
@@ -23,11 +25,16 @@ const priorityVariant = (p: RoadmapItem['priority']): 'danger' | 'warning' | 'de
 
 export default function RoadmapPage() {
   const { t, lang, isRTL } = useLang();
+  const toast = useToast();
   const [items, setItems] = useState<RoadmapItem[]>(demoRoadmap);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
   const toggleComplete = (id: string) => {
-    setItems(items.map(item => item.id === id ? { ...item, completed: !item.completed } : item));
+    const item = items.find(i => i.id === id);
+    const willComplete = !item?.completed;
+    setItems(items.map(i => i.id === id ? { ...i, completed: willComplete } : i));
+    if (willComplete) toast.success(`"${item?.title}" marked as complete! 🎉`);
+    else toast.info(`"${item?.title}" marked as pending.`);
   };
 
   const completed = items.filter(i => i.completed).length;
@@ -84,6 +91,13 @@ export default function RoadmapPage() {
 
         {/* Roadmap items */}
         <div className="space-y-3">
+          {filtered.length === 0 && (
+            <EmptyState
+              icon={<CheckCircle size={32} />}
+              title={filter === 'completed' ? 'No completed milestones yet' : 'All milestones completed!'}
+              description={filter === 'completed' ? 'Start checking off your roadmap items to see them here.' : 'Great work — all pending items are done!'}
+            />
+          )}
           {filtered.map((item, index) => (
             <Card key={item.id} className={cn('transition-all', item.completed && 'opacity-70')}>
               <div className={cn('flex items-start gap-4', isRTL ? 'flex-row-reverse' : '')}>

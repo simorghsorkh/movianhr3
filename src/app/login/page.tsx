@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
@@ -13,6 +14,7 @@ import { Card } from '@/components/ui/Card';
 export default function LoginPage() {
   const { t } = useLang();
   const { login } = useAuth();
+  const toast = useToast();
   const router = useRouter();
 
   const [email, setEmail] = useState('');
@@ -28,9 +30,11 @@ export default function LoginPage() {
     const ok = await login(email, password);
     setLoading(false);
     if (ok) {
-      router.push('/dashboard/job-seeker');
+      toast.success('Welcome back! Redirecting to your dashboard…');
+      router.push('/dashboard');
     } else {
       setError('Invalid email or password. Try the demo accounts below.');
+      toast.error('Login failed. Please check your credentials.');
     }
   };
 
@@ -46,13 +50,10 @@ export default function LoginPage() {
     const ok = await login(acc.email, acc.pass);
     setLoading(false);
     if (ok) {
-      const roleMap: Record<string, string> = {
-        'Job Seeker': '/dashboard/job-seeker',
-        'Mentor': '/dashboard/mentor',
-        'Trainer': '/dashboard/trainer',
-        'Admin': '/dashboard/admin',
-      };
-      router.push(roleMap[acc.label] ?? '/dashboard/job-seeker');
+      toast.success(`Logged in as ${acc.label}. Welcome!`);
+      router.push('/dashboard');
+    } else {
+      toast.error('Demo login failed. Please try again.');
     }
   };
 
