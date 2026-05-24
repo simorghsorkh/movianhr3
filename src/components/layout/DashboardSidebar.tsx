@@ -199,9 +199,14 @@ export function DashboardSidebar() {
        * border-s = logical "start" border → becomes border-right in RTL
        * which is the inner edge between sidebar and content.
        */}
-      <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 bg-white border-l border-gray-100 h-screen sticky top-0">
+      <aside
+        style={{ position: 'fixed', top: 0, right: 0, height: '100vh', width: '240px', zIndex: 30, display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff', borderLeft: '1px solid #f3f4f6' }}
+        className="hidden lg:flex"
+      >
         <SidebarContent />
       </aside>
+      {/* Spacer so content doesn't go under the fixed sidebar */}
+      <div style={{ width: '240px', flexShrink: 0 }} className="hidden lg:block" />
 
       {/* Mobile toggle — bottom-right corner in RTL */}
       <button
