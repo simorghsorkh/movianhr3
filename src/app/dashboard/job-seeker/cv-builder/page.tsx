@@ -6,37 +6,41 @@ import { useLang } from '@/contexts/LanguageContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input, Textarea, Select } from '@/components/ui/Input';
+import { Input, Textarea } from '@/components/ui/Input';
 import { demoJobSeekers } from '@/lib/demoData';
 import { cn } from '@/lib/utils';
 
-const templates = [
-  { id: 'modern', name: 'Modern', color: 'bg-primary-600', preview: '▬▬ ▬▬▬▬▬▬\n▬▬▬▬▬▬▬▬▬\n▬▬▬ ▬▬▬' },
-  { id: 'classic', name: 'Classic', color: 'bg-gray-800', preview: '▬▬▬▬▬▬▬▬▬\n▬▬ ▬▬▬\n▬▬▬▬▬▬▬' },
-  { id: 'minimal', name: 'Minimal', color: 'bg-teal-600', preview: '▬▬▬ ▬▬▬▬\n▬▬▬▬▬▬▬\n▬▬ ▬▬▬▬▬' },
-];
-
 export default function CVBuilderPage() {
-  const { t, isRTL } = useLang();
+  const { t, lang, isRTL } = useLang();
+  const fa = lang === 'fa';
   const demoData = demoJobSeekers[0];
   const [selectedTemplate, setSelectedTemplate] = useState('modern');
   const [activeTab, setActiveTab] = useState<'upload' | 'build'>('build');
   const [saved, setSaved] = useState(false);
 
+  const templates = [
+    { id: 'modern',  name: fa ? 'مدرن'    : 'Modern',  color: 'bg-primary-600', preview: '▬▬ ▬▬▬▬▬▬\n▬▬▬▬▬▬▬▬▬\n▬▬▬ ▬▬▬' },
+    { id: 'classic', name: fa ? 'کلاسیک'  : 'Classic', color: 'bg-gray-800',    preview: '▬▬▬▬▬▬▬▬▬\n▬▬ ▬▬▬\n▬▬▬▬▬▬▬' },
+    { id: 'minimal', name: fa ? 'مینیمال' : 'Minimal', color: 'bg-teal-600',    preview: '▬▬▬ ▬▬▬▬\n▬▬▬▬▬▬▬\n▬▬ ▬▬▬▬▬' },
+  ];
+
   const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <DashboardHeader title={t('cvBuilder')} subtitle="Create a professional CV that stands out." />
+      <DashboardHeader
+        title={t('cvBuilder')}
+        subtitle={fa ? 'یک رزومه حرفه‌ای و برجسته بسازید.' : 'Create a professional CV that stands out.'}
+      />
 
       <div className="p-6 space-y-6">
         {/* Tab switch */}
-        <div className="flex bg-gray-100 rounded-xl p-1 w-fit">
+        <div className={cn('flex bg-gray-100 rounded-xl p-1 w-fit', isRTL ? 'flex-row-reverse' : '')}>
           {(['build', 'upload'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={cn('px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors', activeTab === tab ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700')}
+              className={cn('px-4 py-2 rounded-lg text-sm font-medium transition-colors', activeTab === tab ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700')}
             >
               {tab === 'build' ? t('buildCV') : t('uploadCV')}
             </button>
@@ -47,10 +51,14 @@ export default function CVBuilderPage() {
           <Card>
             <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-primary-400 transition-colors">
               <Upload size={40} className="mx-auto mb-4 text-gray-400" />
-              <h3 className="text-base font-semibold text-gray-900 mb-2">Upload Your Existing CV</h3>
-              <p className="text-sm text-gray-500 mb-6">PDF or DOCX files up to 10MB</p>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">
+                {fa ? 'رزومه موجود خود را آپلود کنید' : 'Upload Your Existing CV'}
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">
+                {fa ? 'فایل‌های PDF یا DOCX تا ۱۰ مگابایت' : 'PDF or DOCX files up to 10MB'}
+              </p>
               <Button variant="primary">
-                <Upload size={16} /> Choose File
+                <Upload size={16} /> {fa ? 'انتخاب فایل' : 'Choose File'}
               </Button>
             </div>
           </Card>
@@ -58,11 +66,15 @@ export default function CVBuilderPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Builder form */}
             <div className="lg:col-span-2 space-y-5">
-              {saved && <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">CV saved successfully!</div>}
+              {saved && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                  {fa ? 'رزومه با موفقیت ذخیره شد!' : 'CV saved successfully!'}
+                </div>
+              )}
 
               {/* Template selection */}
               <Card>
-                <CardHeader><CardTitle>Choose Template</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{fa ? 'انتخاب قالب' : 'Choose Template'}</CardTitle></CardHeader>
                 <div className={cn('flex gap-3', isRTL ? 'flex-row-reverse' : '')}>
                   {templates.map(tmpl => (
                     <button
@@ -81,41 +93,43 @@ export default function CVBuilderPage() {
 
               {/* Personal info */}
               <Card>
-                <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{fa ? 'اطلاعات شخصی' : 'Personal Information'}</CardTitle></CardHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input label="Full Name" defaultValue={demoData.name} />
-                  <Input label="Email" defaultValue={demoData.email} />
-                  <Input label="Phone" defaultValue={demoData.phone ?? ''} />
-                  <Input label="Location" defaultValue={demoData.location ?? ''} />
+                  <Input label={fa ? 'نام کامل' : 'Full Name'} defaultValue={demoData.name} />
+                  <Input label={fa ? 'ایمیل' : 'Email'} defaultValue={demoData.email} />
+                  <Input label={fa ? 'تلفن' : 'Phone'} defaultValue={demoData.phone ?? ''} />
+                  <Input label={fa ? 'موقعیت مکانی' : 'Location'} defaultValue={demoData.location ?? ''} />
                   <div className="md:col-span-2">
-                    <Input label="Professional Headline" defaultValue={demoData.headline ?? ''} />
+                    <Input label={fa ? 'عنوان حرفه‌ای' : 'Professional Headline'} defaultValue={demoData.headline ?? ''} />
                   </div>
                   <div className="md:col-span-2">
-                    <Textarea label="Professional Summary" rows={3} defaultValue={demoData.bio ?? ''} />
+                    <Textarea label={fa ? 'خلاصه حرفه‌ای' : 'Professional Summary'} rows={3} defaultValue={demoData.bio ?? ''} />
                   </div>
                 </div>
               </Card>
 
-              {/* Summary section placeholder */}
+              {/* Work experience */}
               <Card>
                 <CardHeader><CardTitle>{t('workExperience')}</CardTitle></CardHeader>
                 {demoData.experience?.map(exp => (
-                  <div key={exp.id} className="mb-3 p-3 bg-gray-50 rounded-lg text-sm">
+                  <div key={exp.id} className={cn('mb-3 p-3 bg-gray-50 rounded-lg text-sm', isRTL ? 'text-right' : '')}>
                     <p className="font-semibold">{exp.title} — {exp.company}</p>
-                    <p className="text-gray-500 text-xs">{exp.startDate} – {exp.current ? 'Present' : exp.endDate}</p>
+                    <p className="text-gray-500 text-xs">
+                      {exp.startDate} – {exp.current ? (fa ? 'تاکنون' : 'Present') : exp.endDate}
+                    </p>
                   </div>
                 ))}
               </Card>
 
               <div className={cn('flex gap-3', isRTL ? 'flex-row-reverse' : '')}>
                 <Button onClick={handleSave} variant="primary" className="flex-1">
-                  <FileText size={16} /> Save CV
+                  <FileText size={16} /> {fa ? 'ذخیره رزومه' : 'Save CV'}
                 </Button>
                 <Button variant="outline">
-                  <Eye size={16} /> Preview
+                  <Eye size={16} /> {fa ? 'پیش‌نمایش' : 'Preview'}
                 </Button>
                 <Button variant="outline">
-                  <Download size={16} /> Export PDF
+                  <Download size={16} /> {fa ? 'خروجی PDF' : 'Export PDF'}
                 </Button>
               </div>
             </div>
@@ -123,7 +137,7 @@ export default function CVBuilderPage() {
             {/* Preview panel */}
             <div>
               <Card className="sticky top-4">
-                <CardHeader><CardTitle>Preview</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{fa ? 'پیش‌نمایش' : 'Preview'}</CardTitle></CardHeader>
                 <div className="bg-white border border-gray-200 rounded-lg p-4 min-h-64">
                   <div className={cn('border-b-2 pb-3 mb-3', selectedTemplate === 'modern' ? 'border-primary-500' : selectedTemplate === 'classic' ? 'border-gray-800' : 'border-teal-500')}>
                     <h2 className="font-bold text-gray-900">{demoData.name}</h2>
@@ -144,7 +158,9 @@ export default function CVBuilderPage() {
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-center text-gray-400 mt-3">Full preview with real data in export</p>
+                <p className="text-xs text-center text-gray-400 mt-3">
+                  {fa ? 'پیش‌نمایش کامل با داده‌های واقعی در خروجی' : 'Full preview with real data in export'}
+                </p>
               </Card>
             </div>
           </div>

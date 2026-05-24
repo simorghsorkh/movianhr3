@@ -9,7 +9,6 @@ import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
-import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -22,31 +21,28 @@ import {
 import { cn } from '@/lib/utils';
 
 export default function JobSeekerProfilePage() {
-  const { t, isRTL } = useLang();
+  const { t, lang, isRTL } = useLang();
   const { user, updateUser } = useAuth();
   const toast = useToast();
+  const fa = lang === 'fa';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Basic info
   const [name, setName] = useState('');
   const [headline, setHeadline] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
 
-  // Skills
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState('');
 
-  // Experience
   const [experience, setExperience] = useState<any[]>([]);
   const [expModalOpen, setExpModalOpen] = useState(false);
   const [editingExp, setEditingExp] = useState<any>({});
   const [savingExp, setSavingExp] = useState(false);
 
-  // Education
   const [education, setEducation] = useState<any[]>([]);
   const [eduModalOpen, setEduModalOpen] = useState(false);
   const [editingEdu, setEditingEdu] = useState<any>({});
@@ -71,7 +67,7 @@ export default function JobSeekerProfilePage() {
         setExperience(exps);
         setEducation(edus);
       } catch {
-        toast.error('Failed to load profile data.');
+        toast.error(fa ? 'بارگذاری اطلاعات پروفایل ناموفق بود.' : 'Failed to load profile data.');
       } finally {
         setLoading(false);
       }
@@ -88,9 +84,9 @@ export default function JobSeekerProfilePage() {
         upsertJobSeekerProfile(user.id, { skills }),
       ]);
       await updateUser({ name, headline, phone, location, bio });
-      toast.success('Profile saved successfully!');
+      toast.success(fa ? 'پروفایل با موفقیت ذخیره شد!' : 'Profile saved successfully!');
     } catch {
-      toast.error('Failed to save profile.');
+      toast.error(fa ? 'ذخیره پروفایل ناموفق بود.' : 'Failed to save profile.');
     } finally {
       setSaving(false);
     }
@@ -119,9 +115,9 @@ export default function JobSeekerProfilePage() {
       setExperience(prev => [saved, ...prev]);
       setExpModalOpen(false);
       setEditingExp({});
-      toast.success('Work experience added!');
+      toast.success(fa ? 'سابقه کاری اضافه شد!' : 'Work experience added!');
     } catch {
-      toast.error('Failed to save experience.');
+      toast.error(fa ? 'ذخیره سابقه کاری ناموفق بود.' : 'Failed to save experience.');
     } finally {
       setSavingExp(false);
     }
@@ -131,9 +127,9 @@ export default function JobSeekerProfilePage() {
     try {
       await deleteWorkExperience(id);
       setExperience(prev => prev.filter(e => e.id !== id));
-      toast.success('Experience removed.');
+      toast.success(fa ? 'سابقه کاری حذف شد.' : 'Experience removed.');
     } catch {
-      toast.error('Failed to remove experience.');
+      toast.error(fa ? 'حذف سابقه کاری ناموفق بود.' : 'Failed to remove experience.');
     }
   };
 
@@ -153,9 +149,9 @@ export default function JobSeekerProfilePage() {
       setEducation(prev => [saved, ...prev]);
       setEduModalOpen(false);
       setEditingEdu({});
-      toast.success('Education added!');
+      toast.success(fa ? 'تحصیلات اضافه شد!' : 'Education added!');
     } catch {
-      toast.error('Failed to save education.');
+      toast.error(fa ? 'ذخیره تحصیلات ناموفق بود.' : 'Failed to save education.');
     } finally {
       setSavingEdu(false);
     }
@@ -165,9 +161,9 @@ export default function JobSeekerProfilePage() {
     try {
       await deleteEducation(id);
       setEducation(prev => prev.filter(e => e.id !== id));
-      toast.success('Education removed.');
+      toast.success(fa ? 'تحصیلات حذف شد.' : 'Education removed.');
     } catch {
-      toast.error('Failed to remove education.');
+      toast.error(fa ? 'حذف تحصیلات ناموفق بود.' : 'Failed to remove education.');
     }
   };
 
@@ -179,37 +175,48 @@ export default function JobSeekerProfilePage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <DashboardHeader title={t('profile')} subtitle="Manage your professional profile." />
+      <DashboardHeader
+        title={t('profile')}
+        subtitle={fa ? 'پروفایل حرفه‌ای خود را مدیریت کنید.' : 'Manage your professional profile.'}
+      />
 
       <div className="p-6 space-y-6 max-w-3xl mx-auto">
 
         {/* Basic Info */}
         <Card>
-          <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{fa ? 'اطلاعات پایه' : 'Basic Information'}</CardTitle></CardHeader>
           <div className={cn('flex items-center gap-4 mb-6', isRTL ? 'flex-row-reverse' : '')}>
             <Avatar name={name} src={user?.avatar} size="xl" />
-            <div>
+            <div className={isRTL ? 'text-right' : ''}>
               <p className="font-semibold text-gray-900">{name}</p>
               <p className="text-sm text-gray-500">{user?.email}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Full Name" value={name} onChange={e => setName(e.target.value)} />
-            <Input label="Professional Headline" value={headline} onChange={e => setHeadline(e.target.value)} placeholder="e.g. Senior Developer" />
-            <Input label="Phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+98 912..." />
-            <Input label="Location" value={location} onChange={e => setLocation(e.target.value)} placeholder="Tehran, Iran" />
+            <Input label={fa ? 'نام کامل' : 'Full Name'} value={name} onChange={e => setName(e.target.value)} />
+            <Input label={fa ? 'عنوان حرفه‌ای' : 'Professional Headline'} value={headline} onChange={e => setHeadline(e.target.value)} placeholder={fa ? 'مثال: توسعه‌دهنده ارشد' : 'e.g. Senior Developer'} />
+            <Input label={fa ? 'تلفن' : 'Phone'} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+98 912..." />
+            <Input label={fa ? 'موقعیت مکانی' : 'Location'} value={location} onChange={e => setLocation(e.target.value)} placeholder={fa ? 'تهران، ایران' : 'Tehran, Iran'} />
           </div>
           <div className="mt-4">
-            <Textarea label="Bio" value={bio} onChange={e => setBio(e.target.value)} rows={3} placeholder="Tell mentors about yourself..." />
+            <Textarea
+              label={fa ? 'درباره من' : 'Bio'}
+              value={bio}
+              onChange={e => setBio(e.target.value)}
+              rows={3}
+              placeholder={fa ? 'خودتان را برای منتورها توضیح دهید...' : 'Tell mentors about yourself...'}
+            />
           </div>
           <div className={cn('flex justify-end mt-4', isRTL ? 'justify-start' : '')}>
-            <Button onClick={handleSaveProfile} loading={saving}><Save size={15} /> Save Profile</Button>
+            <Button onClick={handleSaveProfile} loading={saving}>
+              <Save size={15} /> {fa ? 'ذخیره پروفایل' : 'Save Profile'}
+            </Button>
           </div>
         </Card>
 
         {/* Skills */}
         <Card>
-          <CardHeader><CardTitle><Zap size={16} className="text-primary-600" /> Skills</CardTitle></CardHeader>
+          <CardHeader><CardTitle><Zap size={16} className="text-primary-600" /> {fa ? 'مهارت‌ها' : 'Skills'}</CardTitle></CardHeader>
           <div className={cn('flex flex-wrap gap-2 mb-4', isRTL ? 'flex-row-reverse' : '')}>
             {skills.map(skill => (
               <span key={skill} className="flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium">
@@ -217,34 +224,47 @@ export default function JobSeekerProfilePage() {
                 <button onClick={() => setSkills(skills.filter(s => s !== skill))} className="ms-1 text-primary-400 hover:text-primary-700"><X size={12} /></button>
               </span>
             ))}
-            {skills.length === 0 && <p className="text-sm text-gray-400">No skills added yet.</p>}
+            {skills.length === 0 && <p className="text-sm text-gray-400">{fa ? 'هنوز مهارتی اضافه نشده.' : 'No skills added yet.'}</p>}
           </div>
           <div className={cn('flex gap-2', isRTL ? 'flex-row-reverse' : '')}>
-            <Input placeholder="Add a skill..." value={newSkill} onChange={e => setNewSkill(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSkill()} />
+            <Input
+              placeholder={fa ? 'افزودن مهارت...' : 'Add a skill...'}
+              value={newSkill}
+              onChange={e => setNewSkill(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addSkill()}
+            />
             <Button onClick={addSkill} variant="outline"><Plus size={16} /></Button>
           </div>
           <div className={cn('flex justify-end mt-4', isRTL ? 'justify-start' : '')}>
-            <Button onClick={handleSaveProfile} loading={saving} size="sm" variant="outline"><Save size={14} /> Save Skills</Button>
+            <Button onClick={handleSaveProfile} loading={saving} size="sm" variant="outline">
+              <Save size={14} /> {fa ? 'ذخیره مهارت‌ها' : 'Save Skills'}
+            </Button>
           </div>
         </Card>
 
         {/* Work Experience */}
         <Card>
           <CardHeader>
-            <CardTitle><Briefcase size={16} className="text-orange-500" /> Work Experience</CardTitle>
-            <Button size="sm" onClick={() => { setEditingExp({}); setExpModalOpen(true); }}><Plus size={14} /> Add</Button>
+            <CardTitle><Briefcase size={16} className="text-orange-500" /> {fa ? 'سابقه کاری' : 'Work Experience'}</CardTitle>
+            <Button size="sm" onClick={() => { setEditingExp({}); setExpModalOpen(true); }}>
+              <Plus size={14} /> {fa ? 'افزودن' : 'Add'}
+            </Button>
           </CardHeader>
           <div className="space-y-4">
-            {experience.length === 0 && <p className="text-sm text-gray-400 py-4 text-center">No work experience added.</p>}
+            {experience.length === 0 && (
+              <p className="text-sm text-gray-400 py-4 text-center">{fa ? 'سابقه کاری اضافه نشده است.' : 'No work experience added.'}</p>
+            )}
             {experience.map(exp => (
               <div key={exp.id} className={cn('flex items-start gap-3 p-4 bg-gray-50 rounded-xl', isRTL ? 'flex-row-reverse' : '')}>
                 <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
                   <Briefcase size={18} className="text-orange-600" />
                 </div>
-                <div className="flex-1">
+                <div className={cn('flex-1', isRTL ? 'text-right' : '')}>
                   <p className="font-semibold text-gray-900">{exp.position}</p>
                   <p className="text-sm text-gray-600">{exp.company}</p>
-                  <p className="text-xs text-gray-400">{exp.start_date} — {exp.is_current ? 'Present' : exp.end_date}</p>
+                  <p className="text-xs text-gray-400">
+                    {exp.start_date} — {exp.is_current ? (fa ? 'تاکنون' : 'Present') : exp.end_date}
+                  </p>
                   {exp.description && <p className="text-sm text-gray-600 mt-1">{exp.description}</p>}
                 </div>
                 <button onClick={() => removeExp(exp.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={16} /></button>
@@ -256,20 +276,28 @@ export default function JobSeekerProfilePage() {
         {/* Education */}
         <Card>
           <CardHeader>
-            <CardTitle><GraduationCap size={16} className="text-purple-500" /> Education</CardTitle>
-            <Button size="sm" onClick={() => { setEditingEdu({}); setEduModalOpen(true); }}><Plus size={14} /> Add</Button>
+            <CardTitle><GraduationCap size={16} className="text-purple-500" /> {fa ? 'تحصیلات' : 'Education'}</CardTitle>
+            <Button size="sm" onClick={() => { setEditingEdu({}); setEduModalOpen(true); }}>
+              <Plus size={14} /> {fa ? 'افزودن' : 'Add'}
+            </Button>
           </CardHeader>
           <div className="space-y-4">
-            {education.length === 0 && <p className="text-sm text-gray-400 py-4 text-center">No education added.</p>}
+            {education.length === 0 && (
+              <p className="text-sm text-gray-400 py-4 text-center">{fa ? 'تحصیلاتی اضافه نشده است.' : 'No education added.'}</p>
+            )}
             {education.map(edu => (
               <div key={edu.id} className={cn('flex items-start gap-3 p-4 bg-gray-50 rounded-xl', isRTL ? 'flex-row-reverse' : '')}>
                 <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
                   <GraduationCap size={18} className="text-purple-600" />
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900">{edu.degree} {edu.field ? `in ${edu.field}` : ''}</p>
+                <div className={cn('flex-1', isRTL ? 'text-right' : '')}>
+                  <p className="font-semibold text-gray-900">
+                    {edu.degree} {edu.field ? (fa ? `در ${edu.field}` : `in ${edu.field}`) : ''}
+                  </p>
                   <p className="text-sm text-gray-600">{edu.institution}</p>
-                  <p className="text-xs text-gray-400">{edu.start_date} — {edu.is_current ? 'Present' : edu.end_date}</p>
+                  <p className="text-xs text-gray-400">
+                    {edu.start_date} — {edu.is_current ? (fa ? 'تاکنون' : 'Present') : edu.end_date}
+                  </p>
                 </div>
                 <button onClick={() => removeEdu(edu.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={16} /></button>
               </div>
@@ -279,37 +307,57 @@ export default function JobSeekerProfilePage() {
       </div>
 
       {/* Experience Modal */}
-      <Modal isOpen={expModalOpen} onClose={() => setExpModalOpen(false)} title="Add Work Experience" size="md"
-        footer={<><Button variant="outline" onClick={() => setExpModalOpen(false)}>{t('cancel')}</Button><Button onClick={saveExp} loading={savingExp}>{t('save')}</Button></>}>
+      <Modal
+        isOpen={expModalOpen}
+        onClose={() => setExpModalOpen(false)}
+        title={fa ? 'افزودن سابقه کاری' : 'Add Work Experience'}
+        size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setExpModalOpen(false)}>{t('cancel')}</Button>
+            <Button onClick={saveExp} loading={savingExp}>{t('save')}</Button>
+          </>
+        }
+      >
         <div className="space-y-3">
-          <Input label="Company *" value={editingExp.company ?? ''} onChange={e => setEditingExp({ ...editingExp, company: e.target.value })} />
-          <Input label="Position *" value={editingExp.position ?? ''} onChange={e => setEditingExp({ ...editingExp, position: e.target.value })} />
+          <Input label={fa ? 'شرکت *' : 'Company *'} value={editingExp.company ?? ''} onChange={e => setEditingExp({ ...editingExp, company: e.target.value })} />
+          <Input label={fa ? 'سمت *' : 'Position *'} value={editingExp.position ?? ''} onChange={e => setEditingExp({ ...editingExp, position: e.target.value })} />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Start Date" type="month" value={editingExp.startDate ?? ''} onChange={e => setEditingExp({ ...editingExp, startDate: e.target.value })} />
-            <Input label="End Date" type="month" value={editingExp.endDate ?? ''} onChange={e => setEditingExp({ ...editingExp, endDate: e.target.value })} disabled={editingExp.current} />
+            <Input label={fa ? 'تاریخ شروع' : 'Start Date'} type="month" value={editingExp.startDate ?? ''} onChange={e => setEditingExp({ ...editingExp, startDate: e.target.value })} />
+            <Input label={fa ? 'تاریخ پایان' : 'End Date'} type="month" value={editingExp.endDate ?? ''} onChange={e => setEditingExp({ ...editingExp, endDate: e.target.value })} disabled={editingExp.current} />
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <label className={cn('flex items-center gap-2 text-sm text-gray-600 cursor-pointer', isRTL ? 'flex-row-reverse' : '')}>
             <input type="checkbox" checked={editingExp.current ?? false} onChange={e => setEditingExp({ ...editingExp, current: e.target.checked })} className="rounded" />
-            Currently working here
+            {fa ? 'هم‌اکنون اینجا کار می‌کنم' : 'Currently working here'}
           </label>
-          <Textarea label="Description" value={editingExp.description ?? ''} onChange={e => setEditingExp({ ...editingExp, description: e.target.value })} rows={3} />
+          <Textarea label={fa ? 'توضیحات' : 'Description'} value={editingExp.description ?? ''} onChange={e => setEditingExp({ ...editingExp, description: e.target.value })} rows={3} />
         </div>
       </Modal>
 
       {/* Education Modal */}
-      <Modal isOpen={eduModalOpen} onClose={() => setEduModalOpen(false)} title="Add Education" size="md"
-        footer={<><Button variant="outline" onClick={() => setEduModalOpen(false)}>{t('cancel')}</Button><Button onClick={saveEdu} loading={savingEdu}>{t('save')}</Button></>}>
+      <Modal
+        isOpen={eduModalOpen}
+        onClose={() => setEduModalOpen(false)}
+        title={fa ? 'افزودن تحصیلات' : 'Add Education'}
+        size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setEduModalOpen(false)}>{t('cancel')}</Button>
+            <Button onClick={saveEdu} loading={savingEdu}>{t('save')}</Button>
+          </>
+        }
+      >
         <div className="space-y-3">
-          <Input label="Institution *" value={editingEdu.institution ?? ''} onChange={e => setEditingEdu({ ...editingEdu, institution: e.target.value })} />
-          <Input label="Degree *" value={editingEdu.degree ?? ''} onChange={e => setEditingEdu({ ...editingEdu, degree: e.target.value })} placeholder="e.g. Bachelor's" />
-          <Input label="Field of Study" value={editingEdu.field ?? ''} onChange={e => setEditingEdu({ ...editingEdu, field: e.target.value })} placeholder="e.g. Computer Science" />
+          <Input label={fa ? 'دانشگاه/موسسه *' : 'Institution *'} value={editingEdu.institution ?? ''} onChange={e => setEditingEdu({ ...editingEdu, institution: e.target.value })} />
+          <Input label={fa ? 'مدرک *' : 'Degree *'} value={editingEdu.degree ?? ''} onChange={e => setEditingEdu({ ...editingEdu, degree: e.target.value })} placeholder={fa ? 'مثال: کارشناسی' : "e.g. Bachelor's"} />
+          <Input label={fa ? 'رشته تحصیلی' : 'Field of Study'} value={editingEdu.field ?? ''} onChange={e => setEditingEdu({ ...editingEdu, field: e.target.value })} placeholder={fa ? 'مثال: مهندسی کامپیوتر' : 'e.g. Computer Science'} />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Start Date" type="month" value={editingEdu.startDate ?? ''} onChange={e => setEditingEdu({ ...editingEdu, startDate: e.target.value })} />
-            <Input label="End Date" type="month" value={editingEdu.endDate ?? ''} onChange={e => setEditingEdu({ ...editingEdu, endDate: e.target.value })} disabled={editingEdu.current} />
+            <Input label={fa ? 'تاریخ شروع' : 'Start Date'} type="month" value={editingEdu.startDate ?? ''} onChange={e => setEditingEdu({ ...editingEdu, startDate: e.target.value })} />
+            <Input label={fa ? 'تاریخ پایان' : 'End Date'} type="month" value={editingEdu.endDate ?? ''} onChange={e => setEditingEdu({ ...editingEdu, endDate: e.target.value })} disabled={editingEdu.current} />
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <label className={cn('flex items-center gap-2 text-sm text-gray-600 cursor-pointer', isRTL ? 'flex-row-reverse' : '')}>
             <input type="checkbox" checked={editingEdu.current ?? false} onChange={e => setEditingEdu({ ...editingEdu, current: e.target.checked })} className="rounded" />
-            Currently studying here
+            {fa ? 'هم‌اکنون اینجا تحصیل می‌کنم' : 'Currently studying here'}
           </label>
         </div>
       </Modal>

@@ -14,12 +14,13 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getApprovedMentors, sendConsultationRequest } from '@/lib/supabase/dal';
-import { cn } from '@/lib/utils';
+import { toPersianNum, cn } from '@/lib/utils';
 
 export default function MentorsPage() {
-  const { t, isRTL } = useLang();
+  const { t, lang, isRTL } = useLang();
   const { user } = useAuth();
   const toast = useToast();
+  const fa = lang === 'fa';
 
   const [mentors, setMentors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,7 @@ export default function MentorsPage() {
         const data = await getApprovedMentors();
         setMentors(data);
       } catch {
-        toast.error('Failed to load mentors.');
+        toast.error(fa ? 'بارگذاری منتورها ناموفق بود.' : 'Failed to load mentors.');
       } finally {
         setLoading(false);
       }
@@ -69,9 +70,12 @@ export default function MentorsPage() {
       setRequestModal(false);
       setSubject('');
       setMessage('');
-      toast.success(`Consultation request sent to ${(selectedMentor.profiles as any)?.name}!`);
+      const mentorName = (selectedMentor.profiles as any)?.name;
+      toast.success(fa
+        ? `درخواست مشاوره به ${mentorName} ارسال شد!`
+        : `Consultation request sent to ${mentorName}!`);
     } catch {
-      toast.error('Failed to send request.');
+      toast.error(fa ? 'ارسال درخواست ناموفق بود.' : 'Failed to send request.');
     } finally {
       setSubmitting(false);
     }
@@ -87,11 +91,14 @@ export default function MentorsPage() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <DashboardHeader title={t('findMentors')} subtitle="Connect with industry experts who can guide your career." />
+      <DashboardHeader
+        title={t('findMentors')}
+        subtitle={fa ? 'با متخصصان صنعت ارتباط برقرار کنید که می‌توانند مسیر شغلی شما را هدایت کنند.' : 'Connect with industry experts who can guide your career.'}
+      />
 
       <div className="p-6 space-y-6">
         <Input
-          placeholder={`${t('search')} mentors by name or expertise...`}
+          placeholder={fa ? `${t('search')} منتورها بر اساس نام یا تخصص...` : `${t('search')} mentors by name or expertise...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           leftIcon={<Search size={16} />}
@@ -105,18 +112,24 @@ export default function MentorsPage() {
               <Card key={mentor.id} className="flex flex-col">
                 <div className={cn('flex items-start gap-3 mb-4', isRTL ? 'flex-row-reverse' : '')}>
                   <Avatar src={profile.avatar} name={profile.name} size="lg" />
-                  <div className="flex-1 min-w-0">
+                  <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : '')}>
                     <h3 className="font-semibold text-gray-900">{profile.name}</h3>
                     <p className="text-xs text-gray-500 mt-0.5">{mentor.location}</p>
                     <div className={cn('flex items-center gap-1 mt-1', isRTL ? 'flex-row-reverse' : '')}>
                       <Star size={13} className="text-amber-400 fill-amber-400" />
-                      <span className="text-sm font-medium text-gray-700">{mentor.rating ?? '—'}</span>
-                      <span className="text-xs text-gray-400">· {mentor.total_sessions ?? 0} sessions</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        {fa && mentor.rating ? toPersianNum(mentor.rating) : (mentor.rating ?? '—')}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        · {fa
+                          ? `${toPersianNum(mentor.total_sessions ?? 0)} جلسه`
+                          : `${mentor.total_sessions ?? 0} sessions`}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{mentor.bio}</p>
+                <p className={cn('text-sm text-gray-600 mb-3 line-clamp-2', isRTL ? 'text-right' : '')}>{mentor.bio}</p>
 
                 <div className={cn('flex flex-wrap gap-1.5 mb-4', isRTL ? 'flex-row-reverse' : '')}>
                   {expertise.slice(0, 3).map((exp: string) => (
@@ -127,9 +140,13 @@ export default function MentorsPage() {
                 <div className={cn('flex items-center justify-between mt-auto pt-3 border-t border-gray-100', isRTL ? 'flex-row-reverse' : '')}>
                   <div>
                     <span className="text-lg font-bold text-gray-900">
-                      {mentor.hourly_rate ? mentor.hourly_rate.toLocaleString('fa-IR') : '—'}
+                      {mentor.hourly_rate
+                        ? (fa ? toPersianNum(mentor.hourly_rate.toLocaleString('fa-IR')) : mentor.hourly_rate.toLocaleString())
+                        : '—'}
                     </span>
-                    <span className="text-xs text-gray-500 ms-1">تومان/hr</span>
+                    <span className="text-xs text-gray-500 ms-1">
+                      {fa ? 'تومان/ساعت' : 'تومان/hr'}
+                    </span>
                   </div>
                   <Button
                     size="sm"
@@ -137,7 +154,9 @@ export default function MentorsPage() {
                     disabled={submitted.includes(mentor.id)}
                     variant={submitted.includes(mentor.id) ? 'secondary' : 'primary'}
                   >
-                    {submitted.includes(mentor.id) ? '✓ Requested' : t('requestConsultation')}
+                    {submitted.includes(mentor.id)
+                      ? (fa ? '✓ درخواست شد' : '✓ Requested')
+                      : t('requestConsultation')}
                   </Button>
                 </div>
               </Card>
@@ -148,7 +167,11 @@ export default function MentorsPage() {
         {filtered.length === 0 && !loading && (
           <div className="text-center py-16 text-gray-400">
             <MessageSquare size={40} className="mx-auto mb-3 opacity-40" />
-            <p>{mentors.length === 0 ? 'No approved mentors yet.' : 'No mentors found matching your search.'}</p>
+            <p>
+              {mentors.length === 0
+                ? (fa ? 'هنوز منتور تأیید‌شده‌ای وجود ندارد.' : 'No approved mentors yet.')
+                : (fa ? 'منتوری با جستجوی شما پیدا نشد.' : 'No mentors found matching your search.')}
+            </p>
           </div>
         )}
       </div>
@@ -156,7 +179,9 @@ export default function MentorsPage() {
       <Modal
         isOpen={requestModal}
         onClose={() => setRequestModal(false)}
-        title={`Request Consultation — ${(selectedMentor?.profiles as any)?.name ?? ''}`}
+        title={fa
+          ? `درخواست مشاوره — ${(selectedMentor?.profiles as any)?.name ?? ''}`
+          : `Request Consultation — ${(selectedMentor?.profiles as any)?.name ?? ''}`}
         size="md"
         footer={
           <>
@@ -166,8 +191,19 @@ export default function MentorsPage() {
         }
       >
         <div className="space-y-4">
-          <Input label="Subject" value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Career transition advice" />
-          <Textarea label="Message" value={message} onChange={e => setMessage(e.target.value)} rows={4} placeholder="Describe what you'd like to discuss..." />
+          <Input
+            label={fa ? 'موضوع' : 'Subject'}
+            value={subject}
+            onChange={e => setSubject(e.target.value)}
+            placeholder={fa ? 'مثال: مشاوره تغییر مسیر شغلی' : 'e.g. Career transition advice'}
+          />
+          <Textarea
+            label={fa ? 'پیام' : 'Message'}
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            rows={4}
+            placeholder={fa ? 'توضیح دهید درباره چه موضوعی می‌خواهید بحث کنید...' : "Describe what you'd like to discuss..."}
+          />
         </div>
       </Modal>
     </div>
