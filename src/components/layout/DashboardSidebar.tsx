@@ -87,7 +87,6 @@ export function DashboardSidebar() {
   const rowClass = (active?: boolean) =>
     cn(
       'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
-      isRTL ? 'flex-row-reverse' : '',
       active
         ? 'bg-primary-50 text-primary-700 font-semibold'
         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -179,10 +178,7 @@ export function DashboardSidebar() {
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className={cn(
-            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-red-600 hover:bg-red-50',
-            isRTL ? 'flex-row-reverse' : ''
-          )}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-red-600 hover:bg-red-50"
         >
           <LogOut size={18} className="flex-shrink-0" />
           <span className={cn('flex-1', isRTL ? 'text-right' : 'text-left')}>{t('logout')}</span>
