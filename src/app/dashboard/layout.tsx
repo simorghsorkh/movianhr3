@@ -28,17 +28,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null;
 
-  /*
-   * Sidebar is the SECOND DOM child so it naturally sits on the RIGHT
-   * in a flex-row layout — no RTL tricks needed.
-   * Content (first child) fills the remaining space on the LEFT.
-   */
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    /*
+     * flex-direction: row-reverse → sidebar (first child) appears on the RIGHT
+     * This is an inline style so it bypasses Tailwind JIT entirely — 100% reliable.
+     */
+    <div style={{ display: 'flex', flexDirection: 'row-reverse', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+      <DashboardSidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {children}
       </div>
-      <DashboardSidebar />
     </div>
   );
 }

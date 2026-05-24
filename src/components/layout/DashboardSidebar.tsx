@@ -199,7 +199,7 @@ export function DashboardSidebar() {
        * border-s = logical "start" border → becomes border-right in RTL
        * which is the inner edge between sidebar and content.
        */}
-      <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 bg-white border-s border-gray-100 h-screen sticky top-0">
+      <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 bg-white border-l border-gray-100 h-screen sticky top-0">
         <SidebarContent />
       </aside>
 
