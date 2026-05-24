@@ -99,12 +99,12 @@ export function DashboardSidebar() {
       {/* ── Logo ── */}
       <div className="px-4 py-5 border-b border-gray-100">
         <Link href="/" className={cn('flex items-center gap-2', isRTL ? 'flex-row-reverse' : '')}>
-          <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">M</span>
-          </div>
           <span className="text-lg font-bold text-gray-900">
             Movi<span className="text-primary-600">an</span>
           </span>
+          <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-sm">M</span>
+          </div>
         </Link>
       </div>
 
