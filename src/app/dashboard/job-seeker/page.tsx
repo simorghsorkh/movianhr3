@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   TrendingUp, FileText, Map, Users, BookOpen,
-  MessageSquare, User, ClipboardList, Lock, CheckCircle,
+  MessageSquare, ClipboardList, Lock, CheckCircle, Linkedin,
 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,13 +17,12 @@ import { getMyRequests, getMyEnrollments, getJobSeekerProfile } from '@/lib/supa
 import { cn, toPersianNum } from '@/lib/utils';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
-  assessment:  <ClipboardList size={28} />,
+  assessment:   <ClipboardList size={28} />,
   'cv-builder': <FileText size={28} />,
-  roadmap:     <Map size={28} />,
-  mentors:     <Users size={28} />,
-  courses:     <BookOpen size={28} />,
-  requests:    <MessageSquare size={28} />,
-  profile:     <User size={28} />,
+  linkedin:     <Linkedin size={28} />,
+  roadmap:      <Map size={28} />,
+  mentors:      <Users size={28} />,
+  courses:      <BookOpen size={28} />,
 };
 
 export default function JobSeekerDashboardPage() {

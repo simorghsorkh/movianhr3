@@ -1,3 +1,7 @@
+/**
+ * Controllable job-seeker features.
+ * Profile and Requests are NOT here — they're always accessible via sidebar.
+ */
 export const FEATURES = [
   {
     key: 'assessment',
@@ -18,6 +22,16 @@ export const FEATURES = [
     descEn: 'Build a professional resume',
     color: 'bg-purple-50 text-purple-600',
     border: 'border-purple-100',
+  },
+  {
+    key: 'linkedin',
+    href: '/dashboard/job-seeker/linkedin',
+    labelFa: 'بهینه‌سازی لینکدین',
+    labelEn: 'LinkedIn Optimizer',
+    descFa: 'پروفایل لینکدین خود را بهبود دهید',
+    descEn: 'Improve your LinkedIn profile with AI',
+    color: 'bg-sky-50 text-sky-600',
+    border: 'border-sky-100',
   },
   {
     key: 'roadmap',
@@ -48,26 +62,6 @@ export const FEATURES = [
     descEn: 'Learn new skills',
     color: 'bg-green-50 text-green-600',
     border: 'border-green-100',
-  },
-  {
-    key: 'requests',
-    href: '/dashboard/job-seeker/requests',
-    labelFa: 'درخواست‌های من',
-    labelEn: 'My Requests',
-    descFa: 'درخواست‌های مشاوره',
-    descEn: 'Consultation requests',
-    color: 'bg-rose-50 text-rose-600',
-    border: 'border-rose-100',
-  },
-  {
-    key: 'profile',
-    href: '/dashboard/job-seeker/profile',
-    labelFa: 'پروفایل',
-    labelEn: 'Profile',
-    descFa: 'اطلاعات شخصی خود را ویرایش کنید',
-    descEn: 'Edit your personal information',
-    color: 'bg-gray-50 text-gray-600',
-    border: 'border-gray-100',
   },
 ] as const;
 

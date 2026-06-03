@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Search, UserCheck, UserX, RefreshCw, Shield, X, CheckSquare, Square } from 'lucide-react';
 import {
   TrendingUp, FileText, Map, Users, BookOpen,
-  MessageSquare, User, ClipboardList,
+  MessageSquare, ClipboardList, Linkedin,
 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -43,11 +43,10 @@ const ROLE_COLORS: Record<string, string> = {
 const FEATURE_ICONS: Record<string, React.ReactNode> = {
   assessment:   <TrendingUp size={16} />,
   'cv-builder': <FileText size={16} />,
+  linkedin:     <Linkedin size={16} />,
   roadmap:      <Map size={16} />,
   mentors:      <Users size={16} />,
   courses:      <BookOpen size={16} />,
-  requests:     <MessageSquare size={16} />,
-  profile:      <User size={16} />,
 };
 
 export default function AdminUsersPage() {
