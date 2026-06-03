@@ -4,6 +4,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { FeatureAccessProvider } from '@/contexts/FeatureAccessContext';
 
 export const metadata: Metadata = {
   title: 'Movian — Career Transformation Platform',
@@ -25,11 +26,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthProvider>
           <LanguageProvider>
-            <NotificationProvider>
-              <ToastProvider>
-                {children}
-              </ToastProvider>
-            </NotificationProvider>
+            <FeatureAccessProvider>
+              <NotificationProvider>
+                <ToastProvider>
+                  {children}
+                </ToastProvider>
+              </NotificationProvider>
+            </FeatureAccessProvider>
           </LanguageProvider>
         </AuthProvider>
       </body>
