@@ -187,66 +187,43 @@ function RolesSection() {
 
 function TestimonialsSection() {
   const { lang, isRTL } = useLang();
-  const testimonials = [
-    {
-      name: 'Sara Ahmadi',
-      nameFa: 'سارا احمدی',
-      role: 'Marketing Manager',
-      roleFa: 'مدیر بازاریابی',
-      text: 'Movian completely changed how I approach my career. The assessment gave me clarity and the roadmap kept me on track.',
-      textFa: 'موویان کاملاً نگاه من به مسیر شغلی‌ام را تغییر داد. ارزیابی به من شفافیت داد و نقشه راه مرا در مسیر درست نگه داشت.',
-      rating: 5,
-    },
-    {
-      name: 'Ali Rezaei',
-      nameFa: 'علی رضایی',
-      role: 'Software Engineer',
-      roleFa: 'مهندس نرم‌افزار',
-      text: 'The mentor I connected with through Movian helped me land a senior role in 3 months. Incredible platform.',
-      textFa: 'منتوری که از طریق موویان با او آشنا شدم کمک کرد در ۳ ماه به یک موقعیت ارشد برسم. پلتفرم فوق‌العاده‌ای است.',
-      rating: 5,
-    },
-    {
-      name: 'Maryam Tehrani',
-      nameFa: 'مریم تهرانی',
-      role: 'Product Designer',
-      roleFa: 'طراح محصول',
-      text: "I was stuck in my career for 2 years. After using Movian's roadmap and taking 2 courses, I finally made the leap.",
-      textFa: 'دو سال در مسیر شغلی‌ام گیر کرده بودم. بعد از استفاده از نقشه راه موویان و گذراندن ۲ دوره، بالاخره جهش کردم.',
-      rating: 5,
-    },
-  ];
+  const { testimonials } = useSiteStats();
 
   return (
     <section className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            {lang === 'fa' ? 'نظر کاربران ما' : 'What Our Users Say'}
+            {lang === 'fa' ? 'نظر کاربران ما' : lang === 'nl' ? 'Wat onze gebruikers zeggen' : 'What Our Users Say'}
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {testimonials.map((item) => (
-            <Card key={item.name} className="flex flex-col">
+          {testimonials.map((item) => {
+            const displayName = lang === 'fa' ? item.nameFa : item.name;
+            const displayRole = lang === 'fa' ? item.roleFa : item.role;
+            const displayText = lang === 'fa' ? item.textFa : item.text;
+            return (
+            <Card key={item.id} className="flex flex-col">
               <div className={cn('flex mb-3', isRTL ? 'flex-row-reverse' : '')}>
                 {Array.from({ length: item.rating }).map((_, i) => (
                   <Star key={i} size={14} className="text-amber-400 fill-amber-400" />
                 ))}
               </div>
               <p className={cn('text-sm text-gray-600 leading-relaxed flex-1 mb-5', isRTL ? 'text-right' : '')}>
-                "{lang === 'fa' ? item.textFa : item.text}"
+                "{displayText}"
               </p>
               <div className={cn('flex items-center gap-3', isRTL ? 'flex-row-reverse' : '')}>
                 <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-semibold text-sm">
-                  {(lang === 'fa' ? item.nameFa : item.name)[0]}
+                  {(displayName || '?')[0]}
                 </div>
                 <div className={isRTL ? 'text-right' : ''}>
-                  <p className="text-sm font-semibold text-gray-900">{lang === 'fa' ? item.nameFa : item.name}</p>
-                  <p className="text-xs text-gray-500">{lang === 'fa' ? item.roleFa : item.role}</p>
+                  <p className="text-sm font-semibold text-gray-900">{displayName}</p>
+                  <p className="text-xs text-gray-500">{displayRole}</p>
                 </div>
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
