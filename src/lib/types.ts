@@ -1,4 +1,4 @@
-export type Language = 'fa' | 'en';
+export type Language = 'fa' | 'en' | 'nl';
 export type UserRole = 'job-seeker' | 'mentor' | 'trainer' | 'admin';
 export type CourseStatus = 'draft' | 'published' | 'archived';
 export type RequestStatus = 'pending' | 'accepted' | 'rejected' | 'completed';

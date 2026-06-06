@@ -7,6 +7,7 @@ import {
   BarChart3, Map, FileText, MessageSquare, ChevronRight, Sparkles,
 } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
+import { useSiteStats } from '@/contexts/SiteStatsContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils';
 
 function HeroSection() {
   const { t, isRTL } = useLang();
+  const { stats } = useSiteStats();
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-primary-950 via-primary-900 to-primary-700 text-white">
       {/* Background decoration */}
@@ -51,12 +53,12 @@ function HeroSection() {
             </Link>
           </div>
 
-          {/* Stats row */}
+          {/* Stats row — values are controlled from the admin panel */}
           <div className={cn('flex flex-wrap gap-8 mt-14', isRTL ? 'flex-row-reverse' : '')}>
             {[
-              { value: '1,500+', label: t('heroStat1') },
-              { value: '180+', label: t('heroStat2') },
-              { value: '90+', label: t('heroStat3') },
+              { value: stats.stat1, label: t('heroStat1') },
+              { value: stats.stat2, label: t('heroStat2') },
+              { value: stats.stat3, label: t('heroStat3') },
             ].map((stat) => (
               <div key={stat.label} className="flex flex-col">
                 <span className="text-3xl font-bold text-white">{stat.value}</span>

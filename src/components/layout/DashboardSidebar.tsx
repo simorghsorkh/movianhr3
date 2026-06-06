@@ -20,7 +20,7 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-function getNavItems(role: UserRole, t: (k: any) => string): NavItem[] {
+function getNavItems(role: UserRole, t: (k: any) => string, lang: string): NavItem[] {
   if (role === 'job-seeker') {
     return [
       { href: '/dashboard/job-seeker',              label: t('overview'),            icon: <LayoutDashboard size={18} /> },
@@ -58,7 +58,8 @@ function getNavItems(role: UserRole, t: (k: any) => string): NavItem[] {
       { href: '/dashboard/admin/approvals', label: t('approvals'),       icon: <CheckSquare size={18} /> },
       { href: '/dashboard/admin/courses',   label: t('courses'),         icon: <BookOpen size={18} /> },
       { href: '/dashboard/admin/requests',  label: t('requests'),        icon: <MessageSquare size={18} /> },
-      { href: '/dashboard/admin/reports',   label: t('reports'),         icon: <BarChart3 size={18} /> },
+      { href: '/dashboard/admin/reports',       label: t('reports'),         icon: <BarChart3 size={18} /> },
+      { href: '/dashboard/admin/site-settings', label: lang === 'fa' ? 'تنظیمات سایت' : lang === 'nl' ? 'Site-instellingen' : 'Site Settings', icon: <Settings size={18} /> },
     ];
   }
   return [];
@@ -73,7 +74,7 @@ export function DashboardSidebar() {
 
   if (!user) return null;
 
-  const navItems = getNavItems(user.role, t);
+  const navItems = getNavItems(user.role, t, lang);
 
   const handleLogout = () => {
     logout();
@@ -165,14 +166,17 @@ export function DashboardSidebar() {
           <span className={cn('flex-1', isRTL ? 'text-right' : 'text-left')}>{t('settings')}</span>
         </Link>
 
-        {/* Language toggle */}
+        {/* Language toggle — cycles: en → nl → fa → en */}
         <button
-          onClick={() => setLang(lang === 'fa' ? 'en' : 'fa')}
+          onClick={() => {
+            const next = lang === 'en' ? 'nl' : lang === 'nl' ? 'fa' : 'en';
+            setLang(next as import('@/lib/types').Language);
+          }}
           className={rowClass()}
         >
           <Globe size={18} className="text-gray-400 flex-shrink-0" />
           <span className={cn('flex-1', isRTL ? 'text-right' : 'text-left')}>
-            {lang === 'fa' ? 'Switch to English' : 'تغییر به فارسی'}
+            {lang === 'en' ? 'Nederlands' : lang === 'nl' ? 'فارسی' : 'English'}
           </span>
         </button>
 

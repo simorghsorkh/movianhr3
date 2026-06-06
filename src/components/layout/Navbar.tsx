@@ -71,13 +71,18 @@ export function Navbar() {
 
           {/* Desktop Actions */}
           <div className={cn('hidden md:flex items-center gap-3', isRTL ? 'flex-row-reverse' : '')}>
-            {/* Language switcher */}
+            {/* Language switcher — cycles en → nl → fa → en */}
             <button
-              onClick={() => setLang(lang === 'fa' ? 'en' : 'fa')}
+              onClick={() => {
+                const next = lang === 'en' ? 'nl' : lang === 'nl' ? 'fa' : 'en';
+                setLang(next as import('@/lib/types').Language);
+              }}
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
             >
               <Globe size={15} />
-              <span className="font-medium">{lang === 'fa' ? 'EN' : 'فا'}</span>
+              <span className="font-medium">
+                {lang === 'en' ? 'NL' : lang === 'nl' ? 'فا' : 'EN'}
+              </span>
             </button>
 
             {user ? (
@@ -157,11 +162,14 @@ export function Navbar() {
           <hr className="my-2 border-gray-100" />
           <div className="flex items-center gap-2 pt-1">
             <button
-              onClick={() => setLang(lang === 'fa' ? 'en' : 'fa')}
+              onClick={() => {
+                const next = lang === 'en' ? 'nl' : lang === 'nl' ? 'fa' : 'en';
+                setLang(next as import('@/lib/types').Language);
+              }}
               className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg"
             >
               <Globe size={15} />
-              {lang === 'fa' ? 'English' : 'فارسی'}
+              {lang === 'en' ? 'Nederlands' : lang === 'nl' ? 'فارسی' : 'English'}
             </button>
           </div>
           {user ? (
