@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CheckCircle, X } from 'lucide-react';
 import { useLang } from '@/contexts/LanguageContext';
@@ -11,13 +11,76 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
+import { formatPrice, defaultCurrencyForLang, CURRENCIES, currencyLabel, type Currency } from '@/lib/currency';
+import type { Plan } from '@/contexts/SiteStatsContext';
+
+/** Compute the displayed monthly/yearly price (in Toman) for a plan given the selected feature ids. */
+function computePlanPrice(plan: Plan, selected: Set<string>, billing: 'monthly' | 'yearly'): number {
+  const allSelected = plan.features.length > 0 && selected.size === plan.features.length;
+
+  let monthly: number;
+  if (allSelected && plan.fullPackagePrice !== null) {
+    monthly = plan.fullPackagePrice * (1 - plan.fullPackageDiscount / 100);
+  } else {
+    monthly = plan.features
+      .filter((f) => selected.has(f.id))
+      .reduce((sum, f) => sum + f.price, 0);
+  }
+
+  if (billing === 'yearly' && plan.priceMonthly && plan.priceMonthly > 0) {
+    const factor = (plan.priceYearly ?? plan.priceMonthly) / plan.priceMonthly;
+    monthly = monthly * factor;
+  }
+
+  return Math.round(monthly);
+}
 
 export default function PricingPage() {
   const { t, lang, isRTL } = useLang();
-  const { plans: contextPlans } = useSiteStats();
+  const { plans: contextPlans, currencyRates } = useSiteStats();
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
 
   const fa = lang === 'fa';
+
+  /* Selected à-la-carte feature ids per plan, defaults to each plan's "included" set */
+  const [selectedFeatures, setSelectedFeatures] = useState<Record<string, Set<string>>>({});
+
+  useEffect(() => {
+    setSelectedFeatures((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const plan of contextPlans) {
+        if (!next[plan.id]) {
+          next[plan.id] = new Set(plan.features.filter((f) => f.included).map((f) => f.id));
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [contextPlans]);
+
+  const toggleFeature = (planId: string, featureId: string) => {
+    setSelectedFeatures((prev) => {
+      const set = new Set(prev[planId] ?? []);
+      if (set.has(featureId)) set.delete(featureId);
+      else set.add(featureId);
+      return { ...prev, [planId]: set };
+    });
+  };
+
+  const selectAll = (plan: Plan) => {
+    setSelectedFeatures((prev) => ({ ...prev, [plan.id]: new Set(plan.features.map((f) => f.id)) }));
+  };
+  const selectNone = (plan: Plan) => {
+    setSelectedFeatures((prev) => ({ ...prev, [plan.id]: new Set() }));
+  };
+
+  /* Currency selector — defaults based on site language, user can override */
+  const [currency, setCurrency] = useState<Currency>(defaultCurrencyForLang(lang));
+  const [currencyTouched, setCurrencyTouched] = useState(false);
+  useEffect(() => {
+    if (!currencyTouched) setCurrency(defaultCurrencyForLang(lang));
+  }, [lang, currencyTouched]);
 
   const faq = fa ? [
     { q: 'آیا می‌توانم هر زمان لغو کنم؟', a: 'بله. اشتراک خود را در هر زمان بدون جریمه لغو کنید. تا پایان دوره صورت‌حساب دسترسی شما حفظ می‌شود.' },
@@ -41,21 +104,36 @@ export default function PricingPage() {
             <h1 className="text-4xl sm:text-5xl font-bold mb-6">{t('pricingTitle')}</h1>
             <p className="text-xl text-white/75 mb-8">{t('pricingSubtitle')}</p>
 
-            {/* Billing toggle */}
-            <div className="inline-flex items-center gap-1 bg-white/10 rounded-xl p-1">
-              <button
-                onClick={() => setBilling('monthly')}
-                className={cn('px-4 py-2 rounded-lg text-sm font-medium transition-colors', billing === 'monthly' ? 'bg-white text-primary-700' : 'text-white/70 hover:text-white')}
-              >
-                {fa ? 'ماهانه' : 'Monthly'}
-              </button>
-              <button
-                onClick={() => setBilling('yearly')}
-                className={cn('px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2', billing === 'yearly' ? 'bg-white text-primary-700' : 'text-white/70 hover:text-white')}
-              >
-                {fa ? 'سالانه' : 'Yearly'}
-                <span className="text-xs bg-green-500 text-white px-1.5 py-0.5 rounded-full">-17%</span>
-              </button>
+            <div className={cn('flex flex-wrap items-center justify-center gap-4', isRTL ? 'flex-row-reverse' : '')}>
+              {/* Billing toggle */}
+              <div className="inline-flex items-center gap-1 bg-white/10 rounded-xl p-1">
+                <button
+                  onClick={() => setBilling('monthly')}
+                  className={cn('px-4 py-2 rounded-lg text-sm font-medium transition-colors', billing === 'monthly' ? 'bg-white text-primary-700' : 'text-white/70 hover:text-white')}
+                >
+                  {fa ? 'ماهانه' : 'Monthly'}
+                </button>
+                <button
+                  onClick={() => setBilling('yearly')}
+                  className={cn('px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2', billing === 'yearly' ? 'bg-white text-primary-700' : 'text-white/70 hover:text-white')}
+                >
+                  {fa ? 'سالانه' : 'Yearly'}
+                  <span className="text-xs bg-green-500 text-white px-1.5 py-0.5 rounded-full">-17%</span>
+                </button>
+              </div>
+
+              {/* Currency selector */}
+              <div className="inline-flex items-center gap-1 bg-white/10 rounded-xl p-1">
+                {CURRENCIES.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => { setCurrency(c); setCurrencyTouched(true); }}
+                    className={cn('px-3 py-2 rounded-lg text-sm font-medium transition-colors', currency === c ? 'bg-white text-primary-700' : 'text-white/70 hover:text-white')}
+                  >
+                    {currencyLabel(c, lang)}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -69,6 +147,11 @@ export default function PricingPage() {
                 const displayDesc = fa ? plan.descriptionFa : plan.description;
                 const borderColor = plan.highlighted ? 'border-primary-500' : 'border-gray-200';
                 const isCustom = plan.priceMonthly === null;
+
+                const selected = selectedFeatures[plan.id] ?? new Set<string>();
+                const allSelected = plan.features.length > 0 && selected.size === plan.features.length;
+                const isFullPackage = allSelected && plan.fullPackagePrice !== null;
+                const totalPrice = computePlanPrice(plan, selected, billing);
 
                 return (
                   <div
@@ -88,28 +171,78 @@ export default function PricingPage() {
                       <div className="flex items-baseline gap-1">
                         {isCustom ? (
                           <span className="text-2xl font-bold text-gray-900">{fa ? 'سفارشی' : lang === 'nl' ? 'Op aanvraag' : 'Custom'}</span>
-                        ) : plan.priceMonthly === 0 ? (
+                        ) : totalPrice === 0 ? (
                           <span className="text-3xl font-bold text-gray-900">{fa ? 'رایگان' : lang === 'nl' ? 'Gratis' : 'Free'}</span>
                         ) : (
                           <>
                             <span className="text-3xl font-bold text-gray-900">
-                              {(billing === 'yearly' ? plan.priceYearly : plan.priceMonthly)?.toLocaleString(fa ? 'fa-IR' : undefined)}
+                              {formatPrice(totalPrice, currency, currencyRates, lang)}
                             </span>
-                            <span className="text-gray-500 text-sm">{fa ? 'تومان ' : ''}{t('perMonth')}</span>
+                            <span className="text-gray-500 text-sm">{t('perMonth')}</span>
                           </>
                         )}
                       </div>
+                      {isFullPackage && plan.fullPackageDiscount > 0 && (
+                        <div className="mt-2">
+                          <span className="text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">
+                            {fa
+                              ? `فول پکیج · ${plan.fullPackageDiscount}٪ تخفیف`
+                              : lang === 'nl'
+                              ? `Volledig pakket · ${plan.fullPackageDiscount}% korting`
+                              : `Full package · ${plan.fullPackageDiscount}% off`}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="p-6 flex-1">
+                      {!isCustom && (
+                        <div className={cn('flex items-center justify-between mb-3', isRTL ? 'flex-row-reverse' : '')}>
+                          <span className={cn('text-xs font-semibold text-gray-500', isRTL ? 'text-right' : '')}>
+                            {fa ? 'موارد دلخواه خود را انتخاب کنید' : lang === 'nl' ? 'Selecteer uw items' : 'Select your items'}
+                          </span>
+                          <div className="flex gap-2">
+                            <button onClick={() => selectAll(plan)} className="text-xs text-primary-600 hover:underline">
+                              {fa ? 'انتخاب همه' : lang === 'nl' ? 'Alles' : 'All'}
+                            </button>
+                            <button onClick={() => selectNone(plan)} className="text-xs text-gray-400 hover:underline">
+                              {fa ? 'هیچ‌کدام' : lang === 'nl' ? 'Geen' : 'None'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       <ul className="space-y-3 mb-6">
-                        {plan.features.map((f) => (
-                          <li key={f.id} className={cn('flex items-center gap-2.5 text-sm', isRTL ? 'flex-row-reverse' : '', f.included ? 'text-gray-700' : 'text-gray-400')}>
-                            {f.included
-                              ? <CheckCircle size={15} className="text-green-500 flex-shrink-0" />
-                              : <X size={15} className="text-gray-300 flex-shrink-0" />}
-                            {fa ? f.labelFa : f.label}
-                          </li>
-                        ))}
+                        {plan.features.map((f) => {
+                          const label = fa ? f.labelFa : f.label;
+                          if (isCustom) {
+                            return (
+                              <li key={f.id} className={cn('flex items-center gap-2.5 text-sm', isRTL ? 'flex-row-reverse' : '', f.included ? 'text-gray-700' : 'text-gray-400')}>
+                                {f.included
+                                  ? <CheckCircle size={15} className="text-green-500 flex-shrink-0" />
+                                  : <X size={15} className="text-gray-300 flex-shrink-0" />}
+                                {label}
+                              </li>
+                            );
+                          }
+                          const checked = selected.has(f.id);
+                          return (
+                            <li key={f.id} className={cn('flex items-center gap-2.5 text-sm', isRTL ? 'flex-row-reverse' : '')}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleFeature(plan.id, f.id)}
+                                className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-400 flex-shrink-0"
+                              />
+                              <span className={cn('flex-1', isRTL ? 'text-right' : '', checked ? 'text-gray-700' : 'text-gray-400')}>
+                                {label}
+                              </span>
+                              {f.price > 0 && (
+                                <span className="text-xs text-gray-400 flex-shrink-0">
+                                  {formatPrice(f.price, currency, currencyRates, lang)}
+                                </span>
+                              )}
+                            </li>
+                          );
+                        })}
                       </ul>
                       <Link href={isCustom ? '/contact' : '/register'}>
                         <Button variant={plan.highlighted ? 'primary' : 'outline'} fullWidth>

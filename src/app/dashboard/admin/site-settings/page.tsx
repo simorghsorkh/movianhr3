@@ -10,7 +10,7 @@ import { useLang } from '@/contexts/LanguageContext';
 import {
   useSiteStats,
   DEFAULT_STATS, DEFAULT_TESTIMONIALS, DEFAULT_PLANS,
-  type SiteStats, type Testimonial, type Plan, type PlanFeature,
+  type SiteStats, type Testimonial, type Plan, type PlanFeature, type CurrencyRates,
 } from '@/contexts/SiteStatsContext';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -159,7 +159,7 @@ function PlansEditor({
   const addFeature = (planId: string) =>
     setPlans(plans.map((p) =>
       p.id === planId
-        ? { ...p, features: [...p.features, { id: genId(), label: '', labelFa: '', included: true }] }
+        ? { ...p, features: [...p.features, { id: genId(), label: '', labelFa: '', included: true, price: 0 }] }
         : p
     ));
 
@@ -283,6 +283,43 @@ function PlansEditor({
                   {textInput(plan.descriptionFa, (v) => updatePlan(plan.id, { descriptionFa: v }), 'rtl')}
                 </div>
 
+                {/* Full package price + discount */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-primary-50/50 border border-primary-100 rounded-xl p-3">
+                  <div>
+                    {label(fa ? 'قیمت فول پکیج (تومان)' : nl ? 'Prijs volledig pakket (Toman)' : 'Full package price (Toman)')}
+                    <input
+                      type="number"
+                      min={0}
+                      value={plan.fullPackagePrice ?? ''}
+                      onChange={(e) => updatePlan(plan.id, {
+                        fullPackagePrice: e.target.value === '' ? null : Number(e.target.value),
+                      })}
+                      dir="ltr"
+                      placeholder={fa ? 'خالی = جمع قیمت موارد' : 'empty = sum of items'}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
+                    />
+                  </div>
+                  <div>
+                    {label(fa ? 'درصد تخفیف فول پکیج' : nl ? 'Korting volledig pakket (%)' : 'Full package discount (%)')}
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={plan.fullPackageDiscount}
+                      onChange={(e) => updatePlan(plan.id, { fullPackageDiscount: Number(e.target.value) })}
+                      dir="ltr"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
+                    />
+                  </div>
+                  <p className={cn('text-xs text-gray-500 sm:col-span-2', isRTL ? 'text-right' : '')}>
+                    {fa
+                      ? 'زمانی که کاربر همه موارد را انتخاب کند، به‌جای جمع قیمت‌ها، این قیمت با این درصد تخفیف نمایش داده می‌شود.'
+                      : nl
+                      ? 'Als de gebruiker alle items selecteert, wordt deze prijs met deze korting getoond in plaats van de som van de items.'
+                      : 'When the user selects every item, this price (minus the discount) is shown instead of the sum of item prices.'}
+                  </p>
+                </div>
+
                 {/* Toggles */}
                 <div className={cn('flex items-center gap-6', isRTL ? 'flex-row-reverse' : '')}>
                   {/* Popular badge toggle */}
@@ -335,6 +372,17 @@ function PlansEditor({
                                 className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary-300"
                               />
                             </div>
+                            <div>
+                              {label(fa ? 'قیمت این مورد (تومان)' : nl ? 'Prijs van dit item (Toman)' : 'Price of this item (Toman)')}
+                              <input
+                                type="number"
+                                min={0}
+                                value={feat.price}
+                                onChange={(e) => updateFeature(plan.id, feat.id, { price: Number(e.target.value) })}
+                                dir="ltr"
+                                className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                              />
+                            </div>
                             <div className={cn('flex items-center gap-3', isRTL ? 'flex-row-reverse' : '')}>
                               <button
                                 onClick={() => updateFeature(plan.id, feat.id, { included: !feat.included })}
@@ -368,6 +416,9 @@ function PlansEditor({
                             />
                             <span className={cn('text-sm text-gray-700 flex-1 truncate', isRTL ? 'text-right' : '')}>
                               {fa ? feat.labelFa : feat.label}
+                            </span>
+                            <span className="text-xs text-gray-400 flex-shrink-0">
+                              {feat.price > 0 ? feat.price.toLocaleString() : ''}
                             </span>
                             <Pencil size={12} className="text-gray-300 group-hover:text-gray-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all" />
                           </div>
@@ -418,13 +469,26 @@ export default function SiteSettingsPage() {
     stats, setStats, resetStats,
     testimonials, setTestimonials, resetTestimonials,
     plans, setPlans, resetPlans,
+    currencyRates, setCurrencyRates, resetCurrencyRates,
   } = useSiteStats();
 
   const fa = lang === 'fa';
   const nl = lang === 'nl';
 
   /* ── Tab state ── */
-  const [tab, setTab] = useState<'stats' | 'testimonials' | 'plans'>('stats');
+  const [tab, setTab] = useState<'stats' | 'testimonials' | 'plans' | 'currency'>('stats');
+
+  /* ── Currency form state ── */
+  const [currencyForm, setCurrencyForm] = useState<CurrencyRates>(currencyRates);
+  const [currencySaved, setCurrencySaved] = useState(false);
+
+  useEffect(() => { setCurrencyForm(currencyRates); }, [currencyRates]);
+
+  const handleCurrencySave = () => {
+    setCurrencyRates(currencyForm);
+    setCurrencySaved(true);
+    setTimeout(() => setCurrencySaved(false), 2500);
+  };
 
   /* ── Stats form state ── */
   const [form, setForm] = useState<SiteStats>(stats);
@@ -469,6 +533,7 @@ export default function SiteSettingsPage() {
     statsTab:        fa ? 'آمار صفحه اصلی'    : nl ? 'Homepage statistieken' : 'Homepage Stats',
     testimonialsTab: fa ? 'نظرات کاربران'      : nl ? 'Gebruikersreviews'     : 'Testimonials',
     plansTab:        fa ? 'پکیج‌های قیمت'     : nl ? 'Prijspakketten'        : 'Pricing Plans',
+    currencyTab:     fa ? 'نرخ ارز'           : nl ? 'Wisselkoersen'         : 'Currency Rates',
     stat1Label:      fa ? 'کارجویان'           : nl ? 'Werkzoekenden'         : 'Job Seekers',
     stat2Label:      fa ? 'منتورهای متخصص'    : nl ? 'Expert mentors'        : 'Expert Mentors',
     stat3Label:      fa ? 'دوره‌ها'            : nl ? 'Cursussen'             : 'Courses',
@@ -498,7 +563,7 @@ export default function SiteSettingsPage() {
 
         {/* ── Tabs ── */}
         <div className={cn('flex gap-1 bg-gray-100 p-1 rounded-xl w-fit', isRTL ? 'flex-row-reverse' : '')}>
-          {(['stats', 'testimonials', 'plans'] as const).map((t) => (
+          {(['stats', 'testimonials', 'plans', 'currency'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -509,7 +574,7 @@ export default function SiteSettingsPage() {
                   : 'text-gray-500 hover:text-gray-700'
               )}
             >
-              {t === 'stats' ? L.statsTab : t === 'testimonials' ? L.testimonialsTab : L.plansTab}
+              {t === 'stats' ? L.statsTab : t === 'testimonials' ? L.testimonialsTab : t === 'plans' ? L.plansTab : L.currencyTab}
             </button>
           ))}
         </div>
@@ -703,6 +768,67 @@ export default function SiteSettingsPage() {
             fa={fa}
             nl={nl}
           />
+        )}
+
+        {/* ══════════════ Currency tab ══════════════ */}
+        {tab === 'currency' && (
+          <>
+            <Card>
+              <CardHeader>
+                <div className={cn('flex items-center gap-2', isRTL ? 'flex-row-reverse' : '')}>
+                  <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
+                    <DollarSign size={16} className="text-primary-600" />
+                  </div>
+                  <CardTitle>{L.currencyTab}</CardTitle>
+                </div>
+              </CardHeader>
+              <div className="space-y-4 mt-2">
+                <div>
+                  <label className={cn('block text-sm font-medium text-gray-700 mb-1.5', isRTL ? 'text-right' : '')}>
+                    {fa ? '۱ دلار آمریکا = چند تومان؟' : nl ? '1 USD = hoeveel Toman?' : '1 USD = how many Toman?'}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={currencyForm.usdToToman}
+                    onChange={(e) => setCurrencyForm((p) => ({ ...p, usdToToman: Number(e.target.value) }))}
+                    dir="ltr"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className={cn('block text-sm font-medium text-gray-700 mb-1.5', isRTL ? 'text-right' : '')}>
+                    {fa ? '۱ یورو = چند تومان؟' : nl ? '1 EUR = hoeveel Toman?' : '1 EUR = how many Toman?'}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={currencyForm.eurToToman}
+                    onChange={(e) => setCurrencyForm((p) => ({ ...p, eurToToman: Number(e.target.value) }))}
+                    dir="ltr"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
+                  />
+                </div>
+              </div>
+            </Card>
+
+            <p className={cn('text-xs text-gray-400', isRTL ? 'text-right' : '')}>
+              {fa
+                ? '⚠️ این نرخ‌ها برای تبدیل قیمت‌ها (که به تومان ذخیره می‌شوند) به ریال، دلار و یورو در صفحه قیمت‌گذاری استفاده می‌شوند.'
+                : nl
+                ? '⚠️ Deze koersen worden gebruikt om prijzen (opgeslagen in Toman) om te rekenen naar Rial, Dollar en Euro op de prijspagina.'
+                : '⚠️ These rates are used to convert prices (stored in Toman) to Rial, Dollar, and Euro on the pricing page.'}
+            </p>
+
+            <div className={cn('flex gap-3', isRTL ? 'flex-row-reverse' : '')}>
+              <Button onClick={handleCurrencySave} className="flex items-center gap-2">
+                {currencySaved ? <><CheckCircle size={16} />{L.savedMsg}</> : <><Save size={16} />{L.saveBtn}</>}
+              </Button>
+              <Button variant="outline" onClick={resetCurrencyRates} className="flex items-center gap-2 text-gray-600">
+                <RotateCcw size={16} />{L.resetBtn}
+              </Button>
+            </div>
+          </>
         )}
 
       </div>
