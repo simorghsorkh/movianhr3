@@ -9,9 +9,10 @@ import {
 import { useLang } from '@/contexts/LanguageContext';
 import {
   useSiteStats,
-  DEFAULT_STATS, DEFAULT_TESTIMONIALS, DEFAULT_PLANS,
-  type SiteStats, type Testimonial, type Plan, type PlanFeature, type CurrencyRates,
+  DEFAULT_STATS, DEFAULT_TESTIMONIALS, DEFAULT_PLANS, EMPTY_PLAN,
+  type SiteStats, type Testimonial, type Plan, type PlanFeature,
 } from '@/contexts/SiteStatsContext';
+import { EMPTY_PRICE, type PriceSet } from '@/lib/currency';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -159,7 +160,7 @@ function PlansEditor({
   const addFeature = (planId: string) =>
     setPlans(plans.map((p) =>
       p.id === planId
-        ? { ...p, features: [...p.features, { id: genId(), label: '', labelFa: '', included: true, price: 0 }] }
+        ? { ...p, features: [...p.features, { id: genId(), label: '', labelFa: '', included: true, price: { ...EMPTY_PRICE } }] }
         : p
     ));
 
@@ -169,6 +170,15 @@ function PlansEditor({
         ? { ...p, features: p.features.filter((f) => f.id !== featureId) }
         : p
     ));
+
+  const addPlan = () => {
+    const id = genId();
+    setPlans([...plans, { ...EMPTY_PLAN, id }]);
+    setExpandedId(id);
+  };
+
+  const deletePlan = (id: string) =>
+    setPlans(plans.filter((p) => p.id !== id));
 
   const label = (text: string) => (
     <span className={cn('block text-xs font-semibold text-gray-600 mb-1', isRTL ? 'text-right' : '')}>{text}</span>
@@ -187,6 +197,50 @@ function PlansEditor({
     />
   );
 
+  /* Three side-by-side number inputs for Rial / USD / EUR values of a PriceSet */
+  const priceInputs = (price: PriceSet, onChange: (p: PriceSet) => void, size: 'sm' | 'md' = 'md') => {
+    const sizeClass = size === 'sm' ? 'px-2.5 py-1.5 text-sm' : 'px-3 py-2 text-sm';
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <span className="block text-[10px] text-gray-400 mb-0.5">{fa ? 'ریال' : nl ? 'Rial' : 'Rial'}</span>
+          <input
+            type="number"
+            min={0}
+            value={price.rial}
+            onChange={(e) => onChange({ ...price, rial: Number(e.target.value) })}
+            dir="ltr"
+            className={cn('w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all', sizeClass)}
+          />
+        </div>
+        <div>
+          <span className="block text-[10px] text-gray-400 mb-0.5">{fa ? 'دلار' : nl ? 'Dollar' : 'Dollar'}</span>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={price.usd}
+            onChange={(e) => onChange({ ...price, usd: Number(e.target.value) })}
+            dir="ltr"
+            className={cn('w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all', sizeClass)}
+          />
+        </div>
+        <div>
+          <span className="block text-[10px] text-gray-400 mb-0.5">{fa ? 'یورو' : nl ? 'Euro' : 'Euro'}</span>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={price.eur}
+            onChange={(e) => onChange({ ...price, eur: Number(e.target.value) })}
+            dir="ltr"
+            className={cn('w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all', sizeClass)}
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {plans.map((plan) => {
@@ -204,11 +258,13 @@ function PlansEditor({
                 <div className={cn('min-w-0', isRTL ? 'text-right' : '')}>
                   <p className="text-sm font-semibold text-gray-900">{displayName}</p>
                   <p className="text-xs text-gray-500">
-                    {plan.priceMonthly === null
+                    {plan.isCustom
                       ? (fa ? 'سفارشی' : nl ? 'Op aanvraag' : 'Custom')
-                      : plan.priceMonthly === 0
+                      : plan.fullPackagePrice && plan.fullPackagePrice.rial === 0 && plan.fullPackagePrice.usd === 0 && plan.fullPackagePrice.eur === 0
                       ? (fa ? 'رایگان' : nl ? 'Gratis' : 'Free')
-                      : `${plan.priceMonthly.toLocaleString()} / ${fa ? 'ماه' : nl ? 'mnd' : 'mo'}`}
+                      : plan.fullPackagePrice
+                      ? `${plan.fullPackagePrice.rial.toLocaleString()} ${fa ? 'ریال' : 'Rial'} / ${fa ? 'ماه' : nl ? 'mnd' : 'mo'}`
+                      : (fa ? 'بر اساس موارد انتخابی' : nl ? 'Op basis van items' : 'Based on selected items')}
                   </p>
                 </div>
                 {plan.popular && (
@@ -217,12 +273,22 @@ function PlansEditor({
                   </span>
                 )}
               </div>
-              <button
-                onClick={() => setExpandedId(isExpanded ? null : plan.id)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all flex-shrink-0"
-              >
-                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
+              <div className={cn('flex items-center gap-1 flex-shrink-0', isRTL ? 'flex-row-reverse' : '')}>
+                <button
+                  onClick={() => {
+                    if (confirm(fa ? 'این پکیج حذف شود؟' : nl ? 'Dit pakket verwijderen?' : 'Delete this plan?')) deletePlan(plan.id);
+                  }}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                >
+                  <Trash2 size={15} />
+                </button>
+                <button
+                  onClick={() => setExpandedId(isExpanded ? null : plan.id)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all"
+                >
+                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+              </div>
             </div>
 
             {/* Expanded editor */}
@@ -241,36 +307,36 @@ function PlansEditor({
                   </div>
                 </div>
 
-                {/* Prices */}
+                {/* Pricing mode + yearly discount */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    {label(fa ? 'قیمت ماهانه (۰ = رایگان، خالی = سفارشی)' : nl ? 'Maandprijs (0=gratis, leeg=op aanvraag)' : 'Monthly price (0=free, empty=custom)')}
-                    <input
-                      type="number"
-                      min={0}
-                      value={plan.priceMonthly ?? ''}
-                      onChange={(e) => updatePlan(plan.id, {
-                        priceMonthly: e.target.value === '' ? null : Number(e.target.value),
-                      })}
-                      dir="ltr"
-                      placeholder={fa ? 'خالی = سفارشی' : 'empty = custom'}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
-                    />
+                    {label(fa ? 'نوع پکیج' : nl ? 'Pakkettype' : 'Plan type')}
+                    <button
+                      onClick={() => updatePlan(plan.id, { isCustom: !plan.isCustom })}
+                      className={cn('flex items-center gap-2 text-sm font-medium transition-colors border border-gray-200 rounded-lg px-3 py-2 w-full', isRTL ? 'flex-row-reverse justify-end' : '', plan.isCustom ? 'text-primary-600' : 'text-gray-500')}
+                    >
+                      {plan.isCustom
+                        ? <ToggleRight size={20} className="text-primary-500" />
+                        : <ToggleLeft size={20} />}
+                      {plan.isCustom
+                        ? (fa ? 'سفارشی (تماس با ما)' : nl ? 'Op aanvraag (Contact)' : 'Custom (Contact us)')
+                        : (fa ? 'دارای قیمت' : nl ? 'Met prijs' : 'Priced')}
+                    </button>
                   </div>
-                  <div>
-                    {label(fa ? 'قیمت سالانه (در ماه)' : nl ? 'Jaarprijs (per maand)' : 'Yearly price (per month)')}
-                    <input
-                      type="number"
-                      min={0}
-                      value={plan.priceYearly ?? ''}
-                      onChange={(e) => updatePlan(plan.id, {
-                        priceYearly: e.target.value === '' ? null : Number(e.target.value),
-                      })}
-                      dir="ltr"
-                      placeholder={fa ? 'خالی = سفارشی' : 'empty = custom'}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
-                    />
-                  </div>
+                  {!plan.isCustom && (
+                    <div>
+                      {label(fa ? 'درصد تخفیف سالانه' : nl ? 'Jaarlijkse korting (%)' : 'Yearly discount (%)')}
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={plan.yearlyDiscountPercent}
+                        onChange={(e) => updatePlan(plan.id, { yearlyDiscountPercent: Number(e.target.value) })}
+                        dir="ltr"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Descriptions */}
@@ -284,34 +350,40 @@ function PlansEditor({
                 </div>
 
                 {/* Full package price + discount */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-primary-50/50 border border-primary-100 rounded-xl p-3">
-                  <div>
-                    {label(fa ? 'قیمت فول پکیج (تومان)' : nl ? 'Prijs volledig pakket (Toman)' : 'Full package price (Toman)')}
-                    <input
-                      type="number"
-                      min={0}
-                      value={plan.fullPackagePrice ?? ''}
-                      onChange={(e) => updatePlan(plan.id, {
-                        fullPackagePrice: e.target.value === '' ? null : Number(e.target.value),
+                <div className="space-y-3 bg-primary-50/50 border border-primary-100 rounded-xl p-3">
+                  <div className={cn('flex items-center justify-between', isRTL ? 'flex-row-reverse' : '')}>
+                    {label(fa ? 'قیمت فول پکیج' : nl ? 'Prijs volledig pakket' : 'Full package price')}
+                    <button
+                      onClick={() => updatePlan(plan.id, {
+                        fullPackagePrice: plan.fullPackagePrice === null ? { ...EMPTY_PRICE } : null,
                       })}
-                      dir="ltr"
-                      placeholder={fa ? 'خالی = جمع قیمت موارد' : 'empty = sum of items'}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
-                    />
+                      className="text-xs text-primary-600 hover:underline"
+                    >
+                      {plan.fullPackagePrice === null
+                        ? (fa ? 'تعیین قیمت فول پکیج' : nl ? 'Stel prijs in' : 'Set full package price')
+                        : (fa ? 'حذف (= جمع موارد)' : nl ? 'Verwijderen (= som items)' : 'Remove (= sum of items)')}
+                    </button>
                   </div>
-                  <div>
-                    {label(fa ? 'درصد تخفیف فول پکیج' : nl ? 'Korting volledig pakket (%)' : 'Full package discount (%)')}
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={plan.fullPackageDiscount}
-                      onChange={(e) => updatePlan(plan.id, { fullPackageDiscount: Number(e.target.value) })}
-                      dir="ltr"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
-                    />
-                  </div>
-                  <p className={cn('text-xs text-gray-500 sm:col-span-2', isRTL ? 'text-right' : '')}>
+                  {plan.fullPackagePrice !== null && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="sm:col-span-1">
+                        {priceInputs(plan.fullPackagePrice, (p) => updatePlan(plan.id, { fullPackagePrice: p }))}
+                      </div>
+                      <div>
+                        {label(fa ? 'درصد تخفیف فول پکیج' : nl ? 'Korting volledig pakket (%)' : 'Full package discount (%)')}
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={plan.fullPackageDiscount}
+                          onChange={(e) => updatePlan(plan.id, { fullPackageDiscount: Number(e.target.value) })}
+                          dir="ltr"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <p className={cn('text-xs text-gray-500', isRTL ? 'text-right' : '')}>
                     {fa
                       ? 'زمانی که کاربر همه موارد را انتخاب کند، به‌جای جمع قیمت‌ها، این قیمت با این درصد تخفیف نمایش داده می‌شود.'
                       : nl
@@ -373,15 +445,8 @@ function PlansEditor({
                               />
                             </div>
                             <div>
-                              {label(fa ? 'قیمت این مورد (تومان)' : nl ? 'Prijs van dit item (Toman)' : 'Price of this item (Toman)')}
-                              <input
-                                type="number"
-                                min={0}
-                                value={feat.price}
-                                onChange={(e) => updateFeature(plan.id, feat.id, { price: Number(e.target.value) })}
-                                dir="ltr"
-                                className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
-                              />
+                              {label(fa ? 'قیمت این مورد' : nl ? 'Prijs van dit item' : 'Price of this item')}
+                              {priceInputs(feat.price, (p) => updateFeature(plan.id, feat.id, { price: p }), 'sm')}
                             </div>
                             <div className={cn('flex items-center gap-3', isRTL ? 'flex-row-reverse' : '')}>
                               <button
@@ -419,19 +484,6 @@ function PlansEditor({
                             >
                               {fa ? feat.labelFa : feat.label}
                             </span>
-                            <div className={cn('flex items-center gap-1 flex-shrink-0', isRTL ? 'flex-row-reverse' : '')}>
-                              <input
-                                type="number"
-                                min={0}
-                                value={feat.price}
-                                onChange={(e) => updateFeature(plan.id, feat.id, { price: Number(e.target.value) })}
-                                onClick={(e) => e.stopPropagation()}
-                                dir="ltr"
-                                title={fa ? 'قیمت این مورد (تومان)' : nl ? 'Prijs van dit item (Toman)' : 'Price of this item (Toman)'}
-                                className="w-24 border border-gray-200 rounded-lg px-2 py-1 text-xs text-right focus:outline-none focus:ring-2 focus:ring-primary-300"
-                              />
-                              <span className="text-xs text-gray-400">{fa ? 'تومان' : nl ? 'Toman' : 'Toman'}</span>
-                            </div>
                             <button onClick={() => setEditingFeatureId(`${plan.id}:${feat.id}`)} className="flex-shrink-0">
                               <Pencil size={12} className="text-gray-300 group-hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all" />
                             </button>
@@ -456,8 +508,12 @@ function PlansEditor({
         );
       })}
 
-      {/* Reset */}
-      <div className={cn('flex pt-2', isRTL ? 'justify-end' : '')}>
+      {/* Add plan + Reset */}
+      <div className={cn('flex pt-2 gap-3', isRTL ? 'justify-end flex-row-reverse' : '')}>
+        <Button onClick={addPlan} className="flex items-center gap-2">
+          <Plus size={16} />
+          {fa ? 'افزودن پکیج جدید' : nl ? 'Nieuw pakket toevoegen' : 'Add New Plan'}
+        </Button>
         <Button variant="outline" onClick={resetPlans} className="flex items-center gap-2 text-gray-600">
           <RotateCcw size={16} />
           {fa ? 'بازگشت به پیش‌فرض' : nl ? 'Terugzetten naar standaard' : 'Reset to Default'}
@@ -483,26 +539,13 @@ export default function SiteSettingsPage() {
     stats, setStats, resetStats,
     testimonials, setTestimonials, resetTestimonials,
     plans, setPlans, resetPlans,
-    currencyRates, setCurrencyRates, resetCurrencyRates,
   } = useSiteStats();
 
   const fa = lang === 'fa';
   const nl = lang === 'nl';
 
   /* ── Tab state ── */
-  const [tab, setTab] = useState<'stats' | 'testimonials' | 'plans' | 'currency'>('stats');
-
-  /* ── Currency form state ── */
-  const [currencyForm, setCurrencyForm] = useState<CurrencyRates>(currencyRates);
-  const [currencySaved, setCurrencySaved] = useState(false);
-
-  useEffect(() => { setCurrencyForm(currencyRates); }, [currencyRates]);
-
-  const handleCurrencySave = () => {
-    setCurrencyRates(currencyForm);
-    setCurrencySaved(true);
-    setTimeout(() => setCurrencySaved(false), 2500);
-  };
+  const [tab, setTab] = useState<'stats' | 'testimonials' | 'plans'>('stats');
 
   /* ── Stats form state ── */
   const [form, setForm] = useState<SiteStats>(stats);
@@ -547,7 +590,6 @@ export default function SiteSettingsPage() {
     statsTab:        fa ? 'آمار صفحه اصلی'    : nl ? 'Homepage statistieken' : 'Homepage Stats',
     testimonialsTab: fa ? 'نظرات کاربران'      : nl ? 'Gebruikersreviews'     : 'Testimonials',
     plansTab:        fa ? 'پکیج‌های قیمت'     : nl ? 'Prijspakketten'        : 'Pricing Plans',
-    currencyTab:     fa ? 'نرخ ارز'           : nl ? 'Wisselkoersen'         : 'Currency Rates',
     stat1Label:      fa ? 'کارجویان'           : nl ? 'Werkzoekenden'         : 'Job Seekers',
     stat2Label:      fa ? 'منتورهای متخصص'    : nl ? 'Expert mentors'        : 'Expert Mentors',
     stat3Label:      fa ? 'دوره‌ها'            : nl ? 'Cursussen'             : 'Courses',
@@ -577,7 +619,7 @@ export default function SiteSettingsPage() {
 
         {/* ── Tabs ── */}
         <div className={cn('flex gap-1 bg-gray-100 p-1 rounded-xl w-fit', isRTL ? 'flex-row-reverse' : '')}>
-          {(['stats', 'testimonials', 'plans', 'currency'] as const).map((t) => (
+          {(['stats', 'testimonials', 'plans'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -588,7 +630,7 @@ export default function SiteSettingsPage() {
                   : 'text-gray-500 hover:text-gray-700'
               )}
             >
-              {t === 'stats' ? L.statsTab : t === 'testimonials' ? L.testimonialsTab : t === 'plans' ? L.plansTab : L.currencyTab}
+              {t === 'stats' ? L.statsTab : t === 'testimonials' ? L.testimonialsTab : L.plansTab}
             </button>
           ))}
         </div>
@@ -782,67 +824,6 @@ export default function SiteSettingsPage() {
             fa={fa}
             nl={nl}
           />
-        )}
-
-        {/* ══════════════ Currency tab ══════════════ */}
-        {tab === 'currency' && (
-          <>
-            <Card>
-              <CardHeader>
-                <div className={cn('flex items-center gap-2', isRTL ? 'flex-row-reverse' : '')}>
-                  <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
-                    <DollarSign size={16} className="text-primary-600" />
-                  </div>
-                  <CardTitle>{L.currencyTab}</CardTitle>
-                </div>
-              </CardHeader>
-              <div className="space-y-4 mt-2">
-                <div>
-                  <label className={cn('block text-sm font-medium text-gray-700 mb-1.5', isRTL ? 'text-right' : '')}>
-                    {fa ? '۱ دلار آمریکا = چند تومان؟' : nl ? '1 USD = hoeveel Toman?' : '1 USD = how many Toman?'}
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={currencyForm.usdToToman}
-                    onChange={(e) => setCurrencyForm((p) => ({ ...p, usdToToman: Number(e.target.value) }))}
-                    dir="ltr"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className={cn('block text-sm font-medium text-gray-700 mb-1.5', isRTL ? 'text-right' : '')}>
-                    {fa ? '۱ یورو = چند تومان؟' : nl ? '1 EUR = hoeveel Toman?' : '1 EUR = how many Toman?'}
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={currencyForm.eurToToman}
-                    onChange={(e) => setCurrencyForm((p) => ({ ...p, eurToToman: Number(e.target.value) }))}
-                    dir="ltr"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition-all"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            <p className={cn('text-xs text-gray-400', isRTL ? 'text-right' : '')}>
-              {fa
-                ? '⚠️ این نرخ‌ها برای تبدیل قیمت‌ها (که به تومان ذخیره می‌شوند) به ریال، دلار و یورو در صفحه قیمت‌گذاری استفاده می‌شوند.'
-                : nl
-                ? '⚠️ Deze koersen worden gebruikt om prijzen (opgeslagen in Toman) om te rekenen naar Rial, Dollar en Euro op de prijspagina.'
-                : '⚠️ These rates are used to convert prices (stored in Toman) to Rial, Dollar, and Euro on the pricing page.'}
-            </p>
-
-            <div className={cn('flex gap-3', isRTL ? 'flex-row-reverse' : '')}>
-              <Button onClick={handleCurrencySave} className="flex items-center gap-2">
-                {currencySaved ? <><CheckCircle size={16} />{L.savedMsg}</> : <><Save size={16} />{L.saveBtn}</>}
-              </Button>
-              <Button variant="outline" onClick={resetCurrencyRates} className="flex items-center gap-2 text-gray-600">
-                <RotateCcw size={16} />{L.resetBtn}
-              </Button>
-            </div>
-          </>
         )}
 
       </div>

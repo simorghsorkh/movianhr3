@@ -3,12 +3,11 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLang } from '@/contexts/LanguageContext';
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
+import { SidebarProvider } from '@/contexts/SidebarContext';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  const { isRTL } = useLang();
   const router = useRouter();
 
   useEffect(() => {
@@ -31,14 +30,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!user) return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <div
-        className="flex-1 flex flex-col min-w-0 overflow-hidden"
-        style={isRTL ? { marginRight: '240px' } : { marginLeft: '240px' }}
-      >
-        {children}
+    <SidebarProvider>
+      <div className="flex min-h-screen bg-gray-50">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {children}
+        </div>
+        <DashboardSidebar />
       </div>
-      <DashboardSidebar />
-    </div>
+    </SidebarProvider>
   );
 }

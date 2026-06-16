@@ -11,33 +11,35 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
-import { formatPrice, defaultCurrencyForLang, CURRENCIES, currencyLabel, type Currency } from '@/lib/currency';
+import {
+  formatPrice, defaultCurrencyForLang, CURRENCIES, currencyLabel, isZeroPrice,
+  addPrices, scalePrice, EMPTY_PRICE, type Currency, type PriceSet,
+} from '@/lib/currency';
 import type { Plan } from '@/contexts/SiteStatsContext';
 
-/** Compute the displayed monthly/yearly price (in Toman) for a plan given the selected feature ids. */
-function computePlanPrice(plan: Plan, selected: Set<string>, billing: 'monthly' | 'yearly'): number {
+/** Compute the displayed monthly/yearly price for a plan given the selected feature ids. */
+function computePlanPrice(plan: Plan, selected: Set<string>, billing: 'monthly' | 'yearly'): PriceSet {
   const allSelected = plan.features.length > 0 && selected.size === plan.features.length;
 
-  let monthly: number;
+  let monthly: PriceSet;
   if (allSelected && plan.fullPackagePrice !== null) {
-    monthly = plan.fullPackagePrice * (1 - plan.fullPackageDiscount / 100);
+    monthly = scalePrice(plan.fullPackagePrice, 1 - plan.fullPackageDiscount / 100);
   } else {
     monthly = plan.features
       .filter((f) => selected.has(f.id))
-      .reduce((sum, f) => sum + f.price, 0);
+      .reduce((sum, f) => addPrices(sum, f.price), { ...EMPTY_PRICE });
   }
 
-  if (billing === 'yearly' && plan.priceMonthly && plan.priceMonthly > 0) {
-    const factor = (plan.priceYearly ?? plan.priceMonthly) / plan.priceMonthly;
-    monthly = monthly * factor;
+  if (billing === 'yearly' && plan.yearlyDiscountPercent > 0) {
+    monthly = scalePrice(monthly, 1 - plan.yearlyDiscountPercent / 100);
   }
 
-  return Math.round(monthly);
+  return monthly;
 }
 
 export default function PricingPage() {
   const { t, lang, isRTL } = useLang();
-  const { plans: contextPlans, currencyRates } = useSiteStats();
+  const { plans: contextPlans } = useSiteStats();
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
 
   const fa = lang === 'fa';
@@ -146,7 +148,7 @@ export default function PricingPage() {
                 const displayName = fa ? plan.nameFa : plan.name;
                 const displayDesc = fa ? plan.descriptionFa : plan.description;
                 const borderColor = plan.highlighted ? 'border-primary-500' : 'border-gray-200';
-                const isCustom = plan.priceMonthly === null;
+                const isCustom = plan.isCustom;
 
                 const selected = selectedFeatures[plan.id] ?? new Set<string>();
                 const allSelected = plan.features.length > 0 && selected.size === plan.features.length;
@@ -171,12 +173,12 @@ export default function PricingPage() {
                       <div className="flex items-baseline gap-1">
                         {isCustom ? (
                           <span className="text-2xl font-bold text-gray-900">{fa ? 'سفارشی' : lang === 'nl' ? 'Op aanvraag' : 'Custom'}</span>
-                        ) : totalPrice === 0 ? (
+                        ) : isZeroPrice(totalPrice) ? (
                           <span className="text-3xl font-bold text-gray-900">{fa ? 'رایگان' : lang === 'nl' ? 'Gratis' : 'Free'}</span>
                         ) : (
                           <>
                             <span className="text-3xl font-bold text-gray-900">
-                              {formatPrice(totalPrice, currency, currencyRates, lang)}
+                              {formatPrice(totalPrice, currency, lang)}
                             </span>
                             <span className="text-gray-500 text-sm">{t('perMonth')}</span>
                           </>
@@ -235,9 +237,9 @@ export default function PricingPage() {
                               <span className={cn('flex-1', isRTL ? 'text-right' : '', checked ? 'text-gray-700' : 'text-gray-400')}>
                                 {label}
                               </span>
-                              {f.price > 0 && (
+                              {!isZeroPrice(f.price) && (
                                 <span className="text-xs text-gray-400 flex-shrink-0">
-                                  {formatPrice(f.price, currency, currencyRates, lang)}
+                                  {formatPrice(f.price, currency, lang)}
                                 </span>
                               )}
                             </li>

@@ -2,17 +2,14 @@ import type { Language } from '@/lib/types';
 
 export type Currency = 'toman' | 'rial' | 'usd' | 'eur';
 
-export interface CurrencyRates {
-  /** 1 USD = how many Toman */
-  usdToToman: number;
-  /** 1 EUR = how many Toman */
-  eurToToman: number;
+/** A price expressed independently in each supported currency (admin enters each value directly). */
+export interface PriceSet {
+  rial: number;
+  usd: number;
+  eur: number;
 }
 
-export const DEFAULT_CURRENCY_RATES: CurrencyRates = {
-  usdToToman: 60000,
-  eurToToman: 65000,
-};
+export const EMPTY_PRICE: PriceSet = { rial: 0, usd: 0, eur: 0 };
 
 export const CURRENCIES: Currency[] = ['toman', 'rial', 'usd', 'eur'];
 
@@ -34,29 +31,31 @@ export function currencyLabel(currency: Currency, lang: Language): string {
   }
 }
 
-/** Convert an amount expressed in Toman (the app's base unit) to the target currency. */
-export function convertFromToman(amountToman: number, currency: Currency, rates: CurrencyRates): number {
-  switch (currency) {
-    case 'toman': return amountToman;
-    case 'rial': return amountToman * 10;
-    case 'usd': return rates.usdToToman > 0 ? amountToman / rates.usdToToman : 0;
-    case 'eur': return rates.eurToToman > 0 ? amountToman / rates.eurToToman : 0;
-  }
+export function isZeroPrice(price: PriceSet): boolean {
+  return price.rial === 0 && price.usd === 0 && price.eur === 0;
 }
 
-/** Format a Toman amount as a localized price string in the given currency. */
-export function formatPrice(amountToman: number, currency: Currency, rates: CurrencyRates, lang: Language): string {
-  const value = convertFromToman(amountToman, currency, rates);
+export function addPrices(a: PriceSet, b: PriceSet): PriceSet {
+  return { rial: a.rial + b.rial, usd: a.usd + b.usd, eur: a.eur + b.eur };
+}
+
+export function scalePrice(price: PriceSet, factor: number): PriceSet {
+  return { rial: price.rial * factor, usd: price.usd * factor, eur: price.eur * factor };
+}
+
+/** Format a PriceSet's value for the given currency as a localized price string. */
+export function formatPrice(price: PriceSet, currency: Currency, lang: Language): string {
   const fa = lang === 'fa';
   const locale = fa ? 'fa-IR' : undefined;
 
   switch (currency) {
-    case 'toman':
     case 'rial':
-      return `${Math.round(value).toLocaleString(locale)} ${currencyLabel(currency, lang)}`;
+      return `${Math.round(price.rial).toLocaleString(locale)} ${currencyLabel('rial', lang)}`;
+    case 'toman':
+      return `${Math.round(price.rial / 10).toLocaleString(locale)} ${currencyLabel('toman', lang)}`;
     case 'usd':
-      return `$${value.toLocaleString(locale, { maximumFractionDigits: 2 })}`;
+      return `$${price.usd.toLocaleString(locale, { maximumFractionDigits: 2 })}`;
     case 'eur':
-      return `€${value.toLocaleString(locale, { maximumFractionDigits: 2 })}`;
+      return `€${price.eur.toLocaleString(locale, { maximumFractionDigits: 2 })}`;
   }
 }
